@@ -1,0 +1,16 @@
+{
+  "name": "reel",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "concurrently \"cd backend && bun install && bun run start\" \"cd frontend && bun install && bun run dev\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "concurrently": "^9.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

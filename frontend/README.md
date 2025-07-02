@@ -1,3 +1,29 @@
+# Frontend - Reel
+
+## Overview
+The `frontend` folder contains the source code for the user interface (UI) of the Reel project, built with React and TypeScript. It enables users to view, search, and manage streams/videos and related features.
+
+## Folder Structure
+- `public/` - Static assets (favicon, logo, etc.)
+- `src/components/` - UI components (StreamPlayer, StreamCard, Sidebar, ...)
+- `src/routes/` - Application route definitions (livestream, upload, search, ...)
+- `src/lib/` - Utility functions, API services, context
+- `src/types/` - TypeScript type definitions
+- `index.html`, `main.tsx` - Application entry points
+
+## Setup & Run
+1. Install dependencies:
+   ```bash
+   bun install
+   ```
+2. Run the frontend app:
+   ```bash
+   bun run dev
+   ```
+
+## Additional Documentation
+- `STREAMING_GUIDE.md`: Guide for streaming from OBS to the system
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
