@@ -53,6 +53,69 @@ router.get('/search/category', async (req, res) => {
   await userController.searchByCategory(req, res)
 })
 
+// Bookmark routes (shorts only)
+// POST /api/users/bookmarks/shorts - Add short bookmark
+router.post('/bookmarks/shorts', async (req, res) => {
+  await userController.addShortBookmark(req, res)
+})
+
+// DELETE /api/users/bookmarks/shorts - Remove short bookmark
+router.delete('/bookmarks/shorts', async (req, res) => {
+  await userController.removeShortBookmark(req, res)
+})
+
+// GET /api/users/:userId/bookmarks/shorts - Get user's short bookmarks
+router.get('/:userId/bookmarks/shorts', async (req, res) => {
+  await userController.getUserShortBookmarks(req, res)
+})
+
+// GET /api/users/bookmarks/shorts/check - Check if short is bookmarked
+router.get('/bookmarks/shorts/check', async (req, res) => {
+  await userController.isShortBookmarked(req, res)
+})
+
+// Like routes for videos
+// POST /api/users/likes/videos - Add video like
+router.post('/likes/videos', async (req, res) => {
+  await userController.addVideoLike(req, res)
+})
+
+// DELETE /api/users/likes/videos - Remove video like
+router.delete('/likes/videos', async (req, res) => {
+  await userController.removeVideoLike(req, res)
+})
+
+// GET /api/users/:userId/likes/videos - Get user's video likes
+router.get('/:userId/likes/videos', async (req, res) => {
+  await userController.getUserVideoLikes(req, res)
+})
+
+// GET /api/users/likes/videos/check - Check if video is liked
+router.get('/likes/videos/check', async (req, res) => {
+  await userController.isVideoLiked(req, res)
+})
+
+// Like routes for shorts
+// POST /api/users/likes/shorts - Add short like
+router.post('/likes/shorts', async (req, res) => {
+  await userController.addShortLike(req, res)
+})
+
+// DELETE /api/users/likes/shorts - Remove short like
+router.delete('/likes/shorts', async (req, res) => {
+  await userController.removeShortLike(req, res)
+})
+
+// GET /api/users/:userId/likes/shorts - Get user's short likes
+router.get('/:userId/likes/shorts', async (req, res) => {
+  await userController.getUserShortLikes(req, res)
+})
+
+// GET /api/users/likes/shorts/check - Check if short is liked
+router.get('/likes/shorts/check', async (req, res) => {
+  await userController.isShortLiked(req, res)
+})
+
 // GET /api/users/:id - Get user by ID (must come after specific routes)
 router.get('/:id', async (req, res) => {
   await userController.getUserById(req, res)

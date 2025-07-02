@@ -5,10 +5,15 @@ import streamKeyRoutes from "./src/routes/streamKeyRoutes";
 import streamSessionRoutes from "./src/routes/streamSessionRoutes";
 import userRoutes from "./src/routes/userRoutes";
 import videoRoutes from "./src/routes/videoRoutes";
+import viewRoutes from "./src/routes/viewRoutes";
+import commentRoutes from "./src/routes/commentRoutes";
+import shareRoutes from "./src/routes/shareRoutes";
 import { streamSessionService } from "./src/services/streamSessionService";
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { streamKeyService } from "./src/services/streamKeyService";
+import { redisService } from "./src/services/redisService";
+import { workerService } from "./src/services/workerService";
 import path from 'path';
 // import chatRoutes from "./src/routes/chatRoutes"; // nếu có
 
@@ -28,6 +33,9 @@ app.use("/api/stream-keys", streamKeyRoutes);
 app.use("/api/sessions", streamSessionRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/videos", videoRoutes);
+app.use("/api/views", viewRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/shares", shareRoutes);
 // app.use("/api/chat", chatRoutes); // nếu có
 app.use('/live', express.static(path.join(__dirname, 'media/live')));
 
@@ -42,6 +50,32 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.get("/", (req, res) => {
   res.send("Streaming backend is running!");
+});
+
+// Client IP endpoint
+app.get("/api/client-ip", (req, res) => {
+  try {
+    // Get client IP from various headers (for proxy/load balancer scenarios)
+    const clientIP = req.headers['x-forwarded-for'] || 
+                    req.headers['x-real-ip'] || 
+                    req.connection.remoteAddress || 
+                    req.socket.remoteAddress ||
+                    'unknown';
+    
+    // If x-forwarded-for contains multiple IPs, take the first one
+    const ip = Array.isArray(clientIP) ? clientIP[0] : clientIP;
+    
+    res.json({ 
+      success: true, 
+      ip: (ip || 'unknown').toString().replace(/^::ffff:/, '') // Remove IPv6 prefix if present
+    });
+  } catch (error) {
+    console.error('Error getting client IP:', error);
+    res.json({ 
+      success: false, 
+      ip: 'unknown' 
+    });
+  }
 });
 
 // WebSocket server cho trạng thái live
@@ -77,10 +111,20 @@ wss.on('connection', (ws: any, req: http.IncomingMessage) => {
 
 
 // Thay app.listen bằng server.listen
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`RTMP Server is running on rtmp://localhost:${RTMP_PORT}/live/`);
   console.log(`HLS Server is running on http://localhost:${HLS_PORT}/live/`);
+  
+  // Initialize Redis connection
+  const redisConnected = await redisService.ping();
+  console.log(`Redis connection: ${redisConnected ? 'Connected' : 'Failed'}`);
+  
+  // Start background workers if Redis is connected
+  if (redisConnected) {
+    await workerService.startWorkers();
+    console.log("Background workers started");
+  }
   
   // Initialize sample stream keys
   streamKeyService.initializeSampleData();

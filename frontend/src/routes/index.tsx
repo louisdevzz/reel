@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
-import { apiService } from '../lib/apiService'
+import { useState, useEffect, useCallback } from 'react'
+import { apiService, User } from '../lib/apiService'
 import React from 'react'
+import { Triangle } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -59,6 +60,7 @@ interface Video {
   uploadDate: string
   views: number
   likes: number
+  creator: string
   type?: 'video' | 'short'
 }
 
@@ -96,9 +98,10 @@ function HomePage() {
   }
 
   const VideoCard = ({ video, isShort = false }: { video: Video; isShort?: boolean }) => {
-    // Ref cho video element nếu là short
     const videoRef = isShort ? React.useRef<HTMLVideoElement>(null) : null;
-
+    const [user, setUser] = useState<User | null>(null);
+    const [userLoading, setUserLoading] = useState(false);
+    
     const handleMouseEnter = () => {
       if (isShort && videoRef?.current) {
         videoRef.current.play();
@@ -111,6 +114,25 @@ function HomePage() {
       }
     };
 
+    // Fetch user data when component mounts
+    useEffect(() => {
+      const fetchUserData = async () => {
+        if (!video.creator) return;
+        
+        try {
+          setUserLoading(true);
+          const userData = await apiService.getUserByUsername(video.creator);
+          setUser(userData);
+        } catch (err) {
+          console.error('Error fetching user data:', err);
+        } finally {
+          setUserLoading(false);
+        }
+      };
+
+      fetchUserData();
+    }, [video.creator]);
+
     return isShort ? (
       <Link
         to="/s/$videoId"
@@ -118,7 +140,7 @@ function HomePage() {
         className="block"
       >
         <div
-          className="bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer"
+          className="bg-[#18181b] min-h-[280px] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -132,14 +154,32 @@ function HomePage() {
               preload="metadata"
               style={{ display: 'block' }}
             />
+            {/* View count with triangle icon, bottom left */}
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-black/60 px-2 py-1 rounded text-white font-medium">
+              <Triangle size={14} className="text-white rotate-90" />
+              {video.views >= 1000 ? `${(video.views / 1000).toFixed(1)}K` : video.views}
+            </div>
             <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
               {formatDuration(video.duration)}
             </span>
           </div>
           <div className="p-4">
-            {/* <div className="font-semibold text-white mb-2 line-clamp-2">{video.title}</div> */}
+            <div className="flex items-center gap-1 mb-2">
+              {userLoading ? (
+                <div className="w-6 h-6 bg-gray-600 rounded-full animate-pulse"></div>
+              ) : user?.avatar ? (
+                <img src={user.avatar} alt={user.username} className="w-6 h-6 rounded-full" />
+              ) : (
+                <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center text-xs text-white">
+                  {video.creator?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <div className="text-sm font-semibold text-white mb-1 line-clamp-2">
+                {user?.username || video.creator || 'Unknown User'}
+              </div>
+            </div>
             {video.description && (
-              <div className="text-sm text-gray-400 mb-2 line-clamp-2">{video.description}</div>
+              <div className="text-sm tex-gray-300 mb-2 line-clamp-2">{video.description.length > 20 ? video.description.slice(0, 20) + '...' : video.description}</div>
             )}
             {video.tags && video.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -163,6 +203,11 @@ function HomePage() {
           <span className="absolute top-2 left-2 bg-purple-600 text-xs font-bold px-2 py-1 rounded text-white">
             VIDEO
           </span>
+          {/* View count with triangle icon, bottom left */}
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 px-2 py-1 rounded text-white text-sm font-medium">
+            <Triangle size={18} className="text-white" fill="white" />
+            {video.views >= 1000 ? `${(video.views / 1000).toFixed(1)}K` : video.views}
+          </div>
           <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
             {formatDuration(video.duration)}
           </span>
@@ -223,7 +268,7 @@ function HomePage() {
         {shorts.length > 0 && (
           <section className="px-4 pt-4">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6 text-purple-300">Latest Shorts</h2>
+              <h2 className="text-2xl font-bold mb-6 text-white">Latest Shorts</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {shorts.slice(0, 6).map((short) => (
                   <VideoCard key={short.id} video={short} isShort={true} />

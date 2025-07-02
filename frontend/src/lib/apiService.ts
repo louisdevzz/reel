@@ -564,6 +564,531 @@ class ApiService {
       return null;
     }
   }
+
+  // ===== ENGAGEMENT SYSTEM APIs =====
+
+  // View Tracking APIs
+  async trackView(contentId: string, contentType: 'videos' | 'shorts', userId?: string): Promise<{ viewId: string } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: { viewId: string } }>(`/views/${contentType}/${contentId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          sessionId: this.generateSessionId(),
+          ipAddress: await this.getClientIP(),
+          userAgent: navigator.userAgent,
+        }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to track view:', error);
+      return null;
+    }
+  }
+
+  async updateView(viewId: string, watchDuration: number, isCompleted: boolean = false): Promise<boolean> {
+    try {
+      await this.request<void>(`/views/${viewId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          watchDuration,
+          isCompleted,
+        }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to update view:', error);
+      return false;
+    }
+  }
+
+  async getViewStats(contentId: string, contentType: 'videos' | 'shorts'): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/views/${contentType}/${contentId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get view stats:', error);
+      return null;
+    }
+  }
+
+  async getUserViewHistory(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/views/user/${userId}/history?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user view history:', error);
+      return [];
+    }
+  }
+
+  // Like APIs
+  async addVideoLike(userId: string, videoId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>('/users/likes/videos', {
+        method: 'POST',
+        body: JSON.stringify({ userId, videoId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add video like:', error);
+      return null;
+    }
+  }
+
+  async removeVideoLike(userId: string, videoId: string): Promise<boolean> {
+    try {
+      await this.request<void>('/users/likes/videos', {
+        method: 'DELETE',
+        body: JSON.stringify({ userId, videoId }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to remove video like:', error);
+      return false;
+    }
+  }
+
+  async getUserVideoLikes(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/likes/videos?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user video likes:', error);
+      return [];
+    }
+  }
+
+  async isVideoLiked(userId: string, videoId: string): Promise<boolean> {
+    try {
+      const response = await this.request<{ success: boolean; data: { isLiked: boolean } }>(`/users/likes/videos/check?userId=${userId}&videoId=${videoId}`);
+      return response.data.isLiked;
+    } catch (error) {
+      console.error('Failed to check if video is liked:', error);
+      return false;
+    }
+  }
+
+  async addShortLike(userId: string, shortId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>('/users/likes/shorts', {
+        method: 'POST',
+        body: JSON.stringify({ userId, shortId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add short like:', error);
+      // Re-throw the error so the frontend can handle it properly
+      throw error;
+    }
+  }
+
+  async removeShortLike(userId: string, shortId: string): Promise<boolean> {
+    try {
+      await this.request<void>('/users/likes/shorts', {
+        method: 'DELETE',
+        body: JSON.stringify({ userId, shortId }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to remove short like:', error);
+      // Re-throw the error so the frontend can handle it properly
+      throw error;
+    }
+  }
+
+  async getUserShortLikes(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/likes/shorts?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user short likes:', error);
+      return [];
+    }
+  }
+
+  async isShortLiked(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const response = await this.request<{ success: boolean; data: { isLiked: boolean } }>(`/users/likes/shorts/check?userId=${userId}&shortId=${shortId}`);
+      return response.data.isLiked;
+    } catch (error) {
+      console.error('Failed to check if short is liked:', error);
+      return false;
+    }
+  }
+
+  // Comment APIs
+  async addVideoComment(videoId: string, userId: string, content: string, parentId?: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/comments/videos/${videoId}`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, content, parentId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add video comment:', error);
+      return null;
+    }
+  }
+
+  async removeVideoComment(commentId: string, userId: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/comments/videos/${commentId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to remove video comment:', error);
+      return false;
+    }
+  }
+
+  async getVideoComments(videoId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/comments/videos/${videoId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get video comments:', error);
+      return [];
+    }
+  }
+
+  async updateVideoComment(commentId: string, userId: string, content: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/comments/videos/${commentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ userId, content }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update video comment:', error);
+      return null;
+    }
+  }
+
+  async addShortComment(shortId: string, userId: string, content: string, parentId?: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/comments/shorts/${shortId}`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, content, parentId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add short comment:', error);
+      // Re-throw the error so the frontend can handle it properly
+      throw error;
+    }
+  }
+
+  async removeShortComment(commentId: string, userId: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/comments/shorts/${commentId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to remove short comment:', error);
+      return false;
+    }
+  }
+
+  async getShortComments(shortId: string): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/comments/shorts/${shortId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get short comments:', error);
+      return [];
+    }
+  }
+
+  async updateShortComment(commentId: string, userId: string, content: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/comments/shorts/${commentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ userId, content }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update short comment:', error);
+      return null;
+    }
+  }
+
+  // Share APIs
+  async addVideoShare(videoId: string, userId: string, platform: string, shareUrl?: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/shares/videos/${videoId}`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, platform, shareUrl }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add video share:', error);
+      return null;
+    }
+  }
+
+  async getVideoShares(videoId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/shares/videos/${videoId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get video shares:', error);
+      return [];
+    }
+  }
+
+  async getVideoShareStats(videoId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/shares/videos/${videoId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get video share stats:', error);
+      return null;
+    }
+  }
+
+  async getUserVideoShares(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/shares/user/${userId}/videos?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user video shares:', error);
+      return [];
+    }
+  }
+
+  async addShortShare(shortId: string, userId: string, platform: string, shareUrl?: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/shares/shorts/${shortId}`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, platform, shareUrl }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add short share:', error);
+      return null;
+    }
+  }
+
+  async getShortShares(shortId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/shares/shorts/${shortId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get short shares:', error);
+      return [];
+    }
+  }
+
+  async getShortShareStats(shortId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/shares/shorts/${shortId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get short share stats:', error);
+      return null;
+    }
+  }
+
+  async getUserShortShares(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/shares/user/${userId}/short?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user short shares:', error);
+      return [];
+    }
+  }
+
+  // Bookmark APIs (shorts only)
+  async addShortBookmark(userId: string, shortId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>('/users/bookmarks/shorts', {
+        method: 'POST',
+        body: JSON.stringify({ userId, shortId }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add short bookmark:', error);
+      // Re-throw the error so the frontend can handle it properly
+      throw error;
+    }
+  }
+
+  async removeShortBookmark(userId: string, shortId: string): Promise<boolean> {
+    try {
+      await this.request<void>('/users/bookmarks/shorts', {
+        method: 'DELETE',
+        body: JSON.stringify({ userId, shortId }),
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to remove short bookmark:', error);
+      // Re-throw the error so the frontend can handle it properly
+      throw error;
+    }
+  }
+
+  async getUserShortBookmarks(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/bookmarks/shorts?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user short bookmarks:', error);
+      return [];
+    }
+  }
+
+  async isShortBookmarked(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const response = await this.request<{ success: boolean; data: { isBookmarked: boolean } }>(`/users/bookmarks/shorts/check?userId=${userId}&shortId=${shortId}`);
+      return response.data.isBookmarked;
+    } catch (error) {
+      console.error('Failed to check if short is bookmarked:', error);
+      return false;
+    }
+  }
+
+  // Analytics APIs
+  async getContentAnalytics(contentId: string, contentType: 'videos' | 'shorts'): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/analytics/${contentType}/${contentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get content analytics:', error);
+      return null;
+    }
+  }
+
+  async getUserAnalytics(userId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/analytics/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get user analytics:', error);
+      return null;
+    }
+  }
+
+  // Helper methods
+  private generateSessionId(): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${random}`;
+  }
+
+  private async getClientIP(): Promise<string> {
+    try {
+      // Try to get IP from our own backend first (which can proxy the request)
+      const response = await fetch(`${API_BASE_URL}/client-ip`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.ip || 'unknown';
+      }
+    } catch (error) {
+      console.error('Error getting client IP from backend:', error);
+    }
+    
+    // Fallback: return unknown since we can't reliably get IP from frontend
+    // due to CORS restrictions on external IP services
+    return 'unknown';
+  }
+
+  // Engagement tracking convenience methods
+  async trackEngagement(action: 'like' | 'comment' | 'share' | 'bookmark', contentId: string, contentType: 'videos' | 'shorts', userId: string, data?: any): Promise<any> {
+    try {
+      switch (action) {
+        case 'like':
+          if (contentType === 'videos') {
+            return await this.addVideoLike(userId, contentId);
+          } else {
+            return await this.addShortLike(userId, contentId);
+          }
+        case 'comment':
+          if (contentType === 'videos') {
+            return await this.addVideoComment(contentId, userId, data.content, data.parentId);
+          } else {
+            return await this.addShortComment(contentId, userId, data.content, data.parentId);
+          }
+        case 'share':
+          if (contentType === 'videos') {
+            return await this.addVideoShare(contentId, userId, data.platform, data.shareUrl);
+          } else {
+            return await this.addShortShare(contentId, userId, data.platform, data.shareUrl);
+          }
+        case 'bookmark':
+          if (contentType === 'shorts') {
+            return await this.addShortBookmark(userId, contentId);
+          } else {
+            throw new Error('Bookmarks are only available for shorts');
+          }
+        default:
+          throw new Error(`Unknown engagement action: ${action}`);
+      }
+    } catch (error) {
+      console.error(`Failed to track ${action}:`, error);
+      return null;
+    }
+  }
+
+  async removeEngagement(action: 'like' | 'comment' | 'bookmark', contentId: string, contentType: 'videos' | 'shorts', userId: string, commentId?: string): Promise<boolean> {
+    try {
+      switch (action) {
+        case 'like':
+          if (contentType === 'videos') {
+            return await this.removeVideoLike(userId, contentId);
+          } else {
+            return await this.removeShortLike(userId, contentId);
+          }
+        case 'comment':
+          if (!commentId) throw new Error('Comment ID required for comment removal');
+          if (contentType === 'videos') {
+            return await this.removeVideoComment(commentId, userId);
+          } else {
+            return await this.removeShortComment(commentId, userId);
+          }
+        case 'bookmark':
+          if (contentType === 'shorts') {
+            return await this.removeShortBookmark(userId, contentId);
+          } else {
+            throw new Error('Bookmarks are only available for shorts');
+          }
+        default:
+          throw new Error(`Unknown engagement action: ${action}`);
+      }
+    } catch (error) {
+      console.error(`Failed to remove ${action}:`, error);
+      return false;
+    }
+  }
+
+  async checkEngagementStatus(action: 'like' | 'bookmark', contentId: string, contentType: 'videos' | 'shorts', userId: string): Promise<boolean> {
+    try {
+      switch (action) {
+        case 'like':
+          if (contentType === 'videos') {
+            return await this.isVideoLiked(userId, contentId);
+          } else {
+            return await this.isShortLiked(userId, contentId);
+          }
+        case 'bookmark':
+          if (contentType === 'shorts') {
+            return await this.isShortBookmarked(userId, contentId);
+          } else {
+            return false; // Bookmarks only for shorts
+          }
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`Failed to check ${action} status:`, error);
+      return false;
+    }
+  }
 }
 
 export const apiService = new ApiService(); 

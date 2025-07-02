@@ -1,5 +1,5 @@
-import { eq, ilike, and, or } from 'drizzle-orm'
-import { db, users, type User, type NewUser } from '../../db'
+import { eq, ilike, and, or, sql } from 'drizzle-orm'
+import { db, users, shortBookmarks, videoLikes, shortLikes, videos, shorts, type User, type NewUser, type ShortBookmark, type VideoLike, type ShortLike } from '../../db'
 
 interface CreateUserRequest {
   username: string
@@ -321,6 +321,267 @@ class UserService {
     } catch (error) {
       console.error('Error searching by category:', error)
       return []
+    }
+  }
+
+  // Bookmark methods (shorts only)
+  async addShortBookmark(userId: string, shortId: string): Promise<ShortBookmark | null> {
+    try {
+      // Start a transaction to update both bookmark table and short bookmarks count
+      const result = await db.transaction(async (tx) => {
+        // Add bookmark record
+        const bookmarkResult = await tx.insert(shortBookmarks)
+          .values({ userId, shortId })
+          .returning()
+        
+        // Update short bookmarks count
+        await tx.update(shorts)
+          .set({ bookmarks: sql`${shorts.bookmarks} + 1` })
+          .where(eq(shorts.id, shortId))
+        
+        return bookmarkResult[0]
+      })
+      
+      return result || null
+    } catch (error) {
+      console.error('Error adding short bookmark:', error)
+      // Check if it's a unique constraint violation
+      if (error instanceof Error && error.message.includes('duplicate key value')) {
+        throw new Error('Short already bookmarked')
+      }
+      throw error
+    }
+  }
+
+  async removeShortBookmark(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const result = await db.transaction(async (tx) => {
+        // Remove bookmark record
+        const bookmarkResult = await tx.delete(shortBookmarks)
+          .where(and(eq(shortBookmarks.userId, userId), eq(shortBookmarks.shortId, shortId)))
+          .returning()
+        
+        if (bookmarkResult.length > 0) {
+          // Update short bookmarks count
+          await tx.update(shorts)
+            .set({ bookmarks: sql`${shorts.bookmarks} - 1` })
+            .where(eq(shorts.id, shortId))
+        }
+        
+        return bookmarkResult.length > 0
+      })
+      
+      return result
+    } catch (error) {
+      console.error('Error removing short bookmark:', error)
+      return false
+    }
+  }
+
+  async getUserShortBookmarks(userId: string, limit: number = 20, offset: number = 0): Promise<{ short: any, bookmarkedAt: Date }[]> {
+    try {
+      const result = await db.select({
+        short: shorts,
+        bookmarkedAt: shortBookmarks.createdAt
+      })
+        .from(shortBookmarks)
+        .innerJoin(shorts, eq(shortBookmarks.shortId, shorts.id))
+        .where(eq(shortBookmarks.userId, userId))
+        .orderBy(shortBookmarks.createdAt)
+        .limit(limit)
+        .offset(offset)
+      
+      return result
+    } catch (error) {
+      console.error('Error fetching user short bookmarks:', error)
+      return []
+    }
+  }
+
+  async isShortBookmarked(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(shortBookmarks)
+        .where(and(eq(shortBookmarks.userId, userId), eq(shortBookmarks.shortId, shortId)))
+      
+      return result.length > 0
+    } catch (error) {
+      console.error('Error checking if short is bookmarked:', error)
+      return false
+    }
+  }
+
+  // Like methods for videos
+  async addVideoLike(userId: string, videoId: string): Promise<VideoLike | null> {
+    try {
+      // Start a transaction to update both like table and video likes count
+      const result = await db.transaction(async (tx) => {
+        // Add like record
+        const likeResult = await tx.insert(videoLikes)
+          .values({ userId, videoId })
+          .returning()
+        
+        // Update video likes count
+        await tx.update(videos)
+          .set({ likes: sql`${videos.likes} + 1` })
+          .where(eq(videos.id, videoId))
+        
+        return likeResult[0]
+      })
+      
+      return result || null
+    } catch (error) {
+      console.error('Error adding video like:', error)
+      // Check if it's a unique constraint violation
+      if (error instanceof Error && error.message.includes('duplicate key value')) {
+        throw new Error('Video already liked')
+      }
+      throw error
+    }
+  }
+
+  async removeVideoLike(userId: string, videoId: string): Promise<boolean> {
+    try {
+      const result = await db.transaction(async (tx) => {
+        // Remove like record
+        const likeResult = await tx.delete(videoLikes)
+          .where(and(eq(videoLikes.userId, userId), eq(videoLikes.videoId, videoId)))
+          .returning()
+        
+        if (likeResult.length > 0) {
+          // Update video likes count
+          await tx.update(videos)
+            .set({ likes: sql`${videos.likes} - 1` })
+            .where(eq(videos.id, videoId))
+        }
+        
+        return likeResult.length > 0
+      })
+      
+      return result
+    } catch (error) {
+      console.error('Error removing video like:', error)
+      return false
+    }
+  }
+
+  async getUserVideoLikes(userId: string, limit: number = 20, offset: number = 0): Promise<{ video: any, likedAt: Date }[]> {
+    try {
+      const result = await db.select({
+        video: videos,
+        likedAt: videoLikes.createdAt
+      })
+        .from(videoLikes)
+        .innerJoin(videos, eq(videoLikes.videoId, videos.id))
+        .where(eq(videoLikes.userId, userId))
+        .orderBy(videoLikes.createdAt)
+        .limit(limit)
+        .offset(offset)
+      
+      return result
+    } catch (error) {
+      console.error('Error fetching user video likes:', error)
+      return []
+    }
+  }
+
+  async isVideoLiked(userId: string, videoId: string): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(videoLikes)
+        .where(and(eq(videoLikes.userId, userId), eq(videoLikes.videoId, videoId)))
+      
+      return result.length > 0
+    } catch (error) {
+      console.error('Error checking if video is liked:', error)
+      return false
+    }
+  }
+
+  // Like methods for shorts
+  async addShortLike(userId: string, shortId: string): Promise<ShortLike | null> {
+    try {
+      // Start a transaction to update both like table and short likes count
+      const result = await db.transaction(async (tx) => {
+        // Add like record
+        const likeResult = await tx.insert(shortLikes)
+          .values({ userId, shortId })
+          .returning()
+        
+        // Update short likes count
+        await tx.update(shorts)
+          .set({ likes: sql`${shorts.likes} + 1` })
+          .where(eq(shorts.id, shortId))
+        
+        return likeResult[0]
+      })
+      
+      return result || null
+    } catch (error) {
+      console.error('Error adding short like:', error)
+      // Check if it's a unique constraint violation
+      if (error instanceof Error && error.message.includes('duplicate key value')) {
+        throw new Error('Short already liked')
+      }
+      throw error
+    }
+  }
+
+  async removeShortLike(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const result = await db.transaction(async (tx) => {
+        // Remove like record
+        const likeResult = await tx.delete(shortLikes)
+          .where(and(eq(shortLikes.userId, userId), eq(shortLikes.shortId, shortId)))
+          .returning()
+        
+        if (likeResult.length > 0) {
+          // Update short likes count
+          await tx.update(shorts)
+            .set({ likes: sql`${shorts.likes} - 1` })
+            .where(eq(shorts.id, shortId))
+        }
+        
+        return likeResult.length > 0
+      })
+      
+      return result
+    } catch (error) {
+      console.error('Error removing short like:', error)
+      return false
+    }
+  }
+
+  async getUserShortLikes(userId: string, limit: number = 20, offset: number = 0): Promise<{ short: any, likedAt: Date }[]> {
+    try {
+      const result = await db.select({
+        short: shorts,
+        likedAt: shortLikes.createdAt
+      })
+        .from(shortLikes)
+        .innerJoin(shorts, eq(shortLikes.shortId, shorts.id))
+        .where(eq(shortLikes.userId, userId))
+        .orderBy(shortLikes.createdAt)
+        .limit(limit)
+        .offset(offset)
+      
+      return result
+    } catch (error) {
+      console.error('Error fetching user short likes:', error)
+      return []
+    }
+  }
+
+  async isShortLiked(userId: string, shortId: string): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(shortLikes)
+        .where(and(eq(shortLikes.userId, userId), eq(shortLikes.shortId, shortId)))
+      
+      return result.length > 0
+    } catch (error) {
+      console.error('Error checking if short is liked:', error)
+      return false
     }
   }
 }
