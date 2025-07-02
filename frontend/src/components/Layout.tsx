@@ -1,3 +1,4 @@
+import { ArrowLeftFromLine, ArrowRightFromLine } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import {
   DropdownMenu,
@@ -7,7 +8,9 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { apiService, User } from '../lib/apiService'
+import { SearchBar } from './SearchBar'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -25,18 +28,64 @@ export function Layout({
   disconnectWallet 
 }: LayoutProps) {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const toggleSidebar = () => {
     setIsSidebarExpanded(!isSidebarExpanded)
   }
 
+  // Fetch user data when account changes
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!account) {
+        setUser(null)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const userData = await apiService.getUserByAptosAddress(account)
+        setUser(userData)
+      } catch (error) {
+        console.error('Failed to fetch user data:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [account])
+
+  // Get display name - username if available, otherwise fallback to address
+  const getDisplayName = () => {
+    if (user?.username) {
+      return user.fullName
+    }
+    if (account) {
+      return `${account.slice(0, 6)}...${account.slice(-4)}`
+    }
+    return 'Unknown'
+  }
+
+
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex overflow-hidden relative">
+      <button
+        onClick={toggleSidebar}
+        className={`fixed left-0 top-1/2 transform -translate-y-1/2 z-50 bg-[#232327] border border-[#2f2f35] border-r-0 rounded-r-lg p-2 hover:bg-[#2f2f35] transition-all duration-300 ${isSidebarExpanded ? 'left-64' : 'left-0'}`}
+        aria-label="Toggle Sidebar"
+      >
+        {isSidebarExpanded
+          ? <ArrowLeftFromLine className="w-4 h-4 text-white" />
+          : <ArrowRightFromLine className="w-4 h-4 text-white" />
+        }
+      </button>
       <Sidebar isExpanded={isSidebarExpanded} />
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarExpanded ? 'ml-64' : 'ml-0'}`}>
-        <header className={`fixed top-0 right-0 h-16 bg-[#18181b] flex items-center px-6 z-20 border-b border-[#232327] transition-all duration-300 ${isSidebarExpanded ? 'left-64' : 'left-0'}`}>
+      <div className="flex-1 flex flex-col min-h-screen transition-all duration-300">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-[#18181b] border-b border-[#2f2f35] flex items-center px-6 z-20">
           <div className="flex-1 flex items-center">
-            {/* Reel Logo */}
             <Link to="/" className="flex items-center space-x-2 mr-6">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-lg">R</span>
@@ -44,25 +93,7 @@ export function Layout({
               <span className="text-white font-bold text-xl">Reel</span>
             </Link>
             
-            {/* Sidebar Toggle Button */}
-            <button 
-              onClick={toggleSidebar}
-              className="mr-4 p-2 rounded bg-gray-800 hover:bg-gray-700 transition-all duration-200"
-            >
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <input
-              type="text"
-              placeholder="Tìm kiếm"
-              className="w-full max-w-md px-4 py-2 rounded bg-black border border-gray-600 text-white focus:outline-none focus:border-white"
-            />
-            <button className="ml-2 p-2 rounded bg-gray-800 hover:bg-gray-700">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-              </svg>
-            </button>
+            <SearchBar className="w-full max-w-md" />
           </div>
           <div>
             <DropdownMenu>
@@ -139,10 +170,20 @@ export function Layout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg transition-all duration-200">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                      <span className="text-black text-sm font-medium">P</span>
+                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+                      {loading ? (
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        user?.avatar ? (
+                          <img src={user?.avatar} alt={user?.username} className="w-full rounded-full h-full object-cover" />
+                        ) : (
+                          <span className="text-black text-sm font-medium">{user?.username?.charAt(0).toUpperCase()}</span>
+                        )
+                      )}
                     </div>
-                    <span className="text-white text-sm">{account?.slice(0, 6)}...{account?.slice(-4)}</span>
+                    <span className="text-white text-sm">
+                      {loading ? 'Loading...' : getDisplayName()}
+                    </span>
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -151,10 +192,24 @@ export function Layout({
                 <DropdownMenuContent className="w-56 bg-[#18181b] border border-[#232327] text-white">
                   <DropdownMenuItem className="text-white hover:bg-gray-800 cursor-pointer">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">Profile</span>
-                      <span className="text-xs text-gray-400">{account?.slice(0, 6)}...{account?.slice(-4)}</span>
+                      <span className="text-sm font-medium">
+                        {user?.username ? user.fullName : 'Profile'}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {user?.username ? `@${user.username}` : getDisplayName()}
+                      </span>
                     </div>
                   </DropdownMenuItem>
+                  {user && (
+                    <>
+                      <DropdownMenuSeparator className="bg-[#232327]" />
+                      <DropdownMenuItem asChild>
+                        <Link to="/u/$username" params={{ username: user.username }} className="text-white hover:bg-gray-800 cursor-pointer">
+                          View Profile
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator className="bg-[#232327]" />
                   <DropdownMenuItem 
                     onClick={disconnectWallet}

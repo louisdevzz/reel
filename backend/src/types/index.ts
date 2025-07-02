@@ -46,4 +46,38 @@ export interface UpdateStreamKeyRequest {
   name?: string;
   isActive?: boolean;
   lastUsed?: Date;
-} 
+}
+
+export interface Video {
+  id: string;
+  title: string;
+  description?: string;
+  duration: number; // in seconds
+  type: 'video' | 'short'; // video: > 60s, short: <= 60s
+  thumbnail: string;
+  videoUrl: string;
+  views: number;
+  likes: number;
+  uploadDate: Date;
+  userId: string;
+  tags?: string[];
+  isPublic: boolean;
+}
+
+export interface Short {
+  id: string;
+  title: string;
+  description?: string;
+  duration: number; // in seconds, must be <= 60
+  thumbnail: string;
+  videoUrl: string;
+  views: number;
+  likes: number;
+  uploadDate: Date;
+  userId: string;
+  tags?: string[];
+  isPublic: boolean;
+}
+
+// Re-export User type from Drizzle schema
+export type { User } from '../../db/schema'

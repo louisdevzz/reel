@@ -1,0 +1,381 @@
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { apiService } from '../../lib/apiService'
+
+export const Route = createFileRoute('/s/$videoId')({
+  component: ShortVideoPage,
+})
+
+function ShortVideoPage() {
+  const { videoId } = useParams({ from: '/s/$videoId' })
+  const navigate = useNavigate()
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [videos, setVideos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set())
+  const [hasInteracted, setHasInteracted] = useState(false)
+  const [preloadedVideoElements, setPreloadedVideoElements] = useState<{[id: string]: HTMLVideoElement | null}>({})
+
+  // Fetch all shorts and current video
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        setLoading(true)
+        const allShorts = await apiService.getShorts()
+        console.log('Fetched shorts:', allShorts)
+        
+        if (allShorts.length === 0) {
+          setError('No videos available')
+          return
+        }
+        
+        setVideos(allShorts)
+        
+        // Find current video index
+        const currentIndex = allShorts.findIndex(v => String(v.id) === String(videoId))
+        if (currentIndex !== -1) {
+          setCurrentVideoIndex(currentIndex)
+        } else {
+          // If video not found, start from the first video
+          setCurrentVideoIndex(0)
+        }
+      } catch (err) {
+        setError('Failed to load videos')
+        console.error('Error fetching videos:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVideos()
+  }, [videoId])
+
+  // Preload next and previous videos with hidden video elements
+  const preloadVideoElement = useCallback((videoId: string) => {
+    if (!videoId || preloadedVideoElements[videoId]) return;
+    const video = document.createElement('video');
+    video.src = `http://localhost:3001/api/videos/proxy/${videoId}`;
+    video.preload = 'auto';
+    video.muted = true;
+    video.style.display = 'none';
+    document.body.appendChild(video);
+    setPreloadedVideoElements(prev => ({ ...prev, [videoId]: video }));
+  }, [preloadedVideoElements]);
+
+  // Preload adjacent videos when current video changes
+  useEffect(() => {
+    if (videos.length === 0) return;
+    const nextIndex = (currentVideoIndex + 1) % videos.length;
+    const prevIndex = currentVideoIndex === 0 ? videos.length - 1 : currentVideoIndex - 1;
+    preloadVideoElement(videos[nextIndex]?.id);
+    preloadVideoElement(videos[prevIndex]?.id);
+  }, [currentVideoIndex, videos, preloadVideoElement]);
+
+  // On navigation, swap to preloaded video for instant display
+  useEffect(() => {
+    const currentId = videos[currentVideoIndex]?.id;
+    if (!currentId || !videoRef.current) return;
+    const preloaded = preloadedVideoElements[currentId];
+    if (preloaded && preloaded.readyState >= 2) {
+      // If preloaded video is ready, swap src for instant play
+      videoRef.current.src = preloaded.src;
+    } else {
+      // Fallback to normal src
+      videoRef.current.src = `http://localhost:3001/api/videos/proxy/${currentId}`;
+    }
+    // Reset play/pause overlay state when video changes
+    setHasInteracted(false);
+    setIsPlaying(false);
+  }, [currentVideoIndex, videos, preloadedVideoElements]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault()
+        nextVideo()
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        previousVideo()
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        handleVideoClick()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentVideoIndex, videos.length])
+
+  // Handle scroll navigation with improved debouncing
+  useEffect(() => {
+    let scrollTimeout: number
+    
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      
+      if (isScrolling) return
+      
+      clearTimeout(scrollTimeout)
+      setIsScrolling(true)
+      
+      if (e.deltaY > 0) {
+        // Scroll down - next video
+        nextVideo()
+      } else if (e.deltaY < 0) {
+        // Scroll up - previous video
+        previousVideo()
+      }
+      
+      // Debounce scroll events
+      scrollTimeout = setTimeout(() => setIsScrolling(false), 300)
+    }
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      const startY = touch.clientY
+      
+      const handleTouchEnd = (e: TouchEvent) => {
+        const touch = e.changedTouches[0]
+        const endY = touch.clientY
+        const deltaY = startY - endY
+        
+        if (Math.abs(deltaY) > 50) { // Minimum swipe distance
+          if (deltaY > 0) {
+            nextVideo()
+          } else {
+            previousVideo()
+          }
+        }
+        
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+      
+      document.addEventListener('touchend', handleTouchEnd, { once: true })
+    }
+
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false })
+      container.addEventListener('touchstart', handleTouchStart, { passive: true })
+      
+      return () => {
+        container.removeEventListener('wheel', handleWheel)
+        container.removeEventListener('touchstart', handleTouchStart)
+        clearTimeout(scrollTimeout)
+      }
+    }
+  }, [isScrolling, currentVideoIndex, videos.length])
+
+  const currentVideo = videos[currentVideoIndex]
+
+  const navigateToVideo = useCallback((index: number) => {
+    if (index >= 0 && index < videos.length) {
+      const video = videos[index]
+      navigate({ to: '/s/$videoId', params: { videoId: video.id } })
+    }
+  }, [navigate, videos])
+
+  const nextVideo = useCallback(() => {
+    const nextIndex = (currentVideoIndex + 1) % videos.length
+    setCurrentVideoIndex(nextIndex)
+    setIsPlaying(false)
+    navigateToVideo(nextIndex)
+  }, [currentVideoIndex, videos.length, navigateToVideo])
+
+  const previousVideo = useCallback(() => {
+    const prevIndex = currentVideoIndex === 0 ? videos.length - 1 : currentVideoIndex - 1
+    setCurrentVideoIndex(prevIndex)
+    setIsPlaying(false)
+    navigateToVideo(prevIndex)
+  }, [currentVideoIndex, videos.length, navigateToVideo])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#18181b]">
+        <div className="flex flex-row flex-1 justify-center items-center gap-4">
+          <div className="flex justify-center items-center relative mt-4">
+            <div className="w-[360px] h-[640px] bg-black rounded-lg animate-pulse" />
+          </div>
+          <div className="flex flex-col gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-10 h-10 rounded-full bg-black animate-pulse mb-2" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen bg-[#18181b] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <div className="text-white text-xl mb-2">An error occurred</div>
+          <div className="text-gray-400">{error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentVideo) {
+    return (
+      <div className="h-screen bg-[#18181b] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 text-6xl mb-4">📹</div>
+          <div className="text-white text-xl mb-2">Video not found</div>
+          <div className="text-gray-400">No videos available in the database</div>
+        </div>
+      </div>
+    )
+  }
+
+  const handleVideoClick = () => {
+    if (videoRef.current) {
+      if (!hasInteracted) setHasInteracted(true)
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleTip = () => {
+    // TODO: Implement tipping functionality with Aptos
+    console.log('Tip sent to', currentVideo.creator || 'Unknown Creator')
+  }
+
+  const handleLike = () => {
+    // TODO: Implement like functionality
+    console.log('Liked video', currentVideo.id)
+  }
+
+  const handleComment = () => {
+    // TODO: Implement comment functionality
+    console.log('Comment on video', currentVideo.id)
+  }
+
+  const handleShare = () => {
+    // TODO: Implement share functionality
+    console.log('Share video', currentVideo.id)
+  }
+
+  const handleBookmark = () => {
+    // TODO: Implement bookmark functionality
+    console.log('Bookmark video', currentVideo.id)
+  }
+
+  return (
+    <div 
+      ref={containerRef}
+      className="min-h-screen flex bg-[#18181b]"
+    >
+      <div className="flex flex-row flex-1 h-[calc(100vh-4rem)] overflow-y-auto justify-center items-center relative gap-4">
+        <div className="flex flex-row items-end gap-4">
+          <div className="video-player flex justify-center items-center relative">
+            <video
+              ref={videoRef}
+              onClick={handleVideoClick}
+              onEnded={nextVideo}
+              autoPlay={true}
+              preload="auto"
+            >
+              <source src={`http://localhost:3001/api/videos/proxy/${currentVideo.id}`} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+
+            {hasInteracted && !isPlaying && (
+              <div className="play-overlay visible">
+                <button className="play-button" onClick={handleVideoClick}>
+                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </button>
+              </div>
+            )}            
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col items-center">
+              <img
+                src={currentVideo.creatorAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}
+                alt={currentVideo.creator || 'Creator'}
+                className="w-10 h-10 rounded-full border-2 border-white"
+              />
+              <button className="mt-[-10px] w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center border-2 border-black shadow hover:bg-pink-600 transition">
+                <span className="text-white text-lg leading-none">+</span>
+              </button>
+            </div>
+            <button className="flex flex-col items-center group" onClick={handleLike}>
+              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </div>
+              <span className="text-white text-xs font-semibold">{currentVideo.likes || 0}</span>
+            </button>
+            <button className="flex flex-col items-center group" onClick={handleComment}>
+              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <span className="text-white text-xs font-semibold">{currentVideo.comments || 0}</span>
+            </button>
+            <button className="flex flex-col items-center group" onClick={handleBookmark}>
+              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z"/>
+                </svg>
+              </div>
+              <span className="text-white text-xs font-semibold">{currentVideo.bookmarks || 0}</span>
+            </button>
+            <button className="flex flex-col items-center group" onClick={handleShare}>
+              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/>
+                  <polyline points="16 6 12 2 8 6"/>
+                  <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <span className="text-white text-xs font-semibold">{currentVideo.shares || 0}</span>
+            </button>
+          </div>
+        </div>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2">
+          <button
+            className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center mb-2 hover:bg-[#333] transition"
+            onClick={previousVideo}
+            aria-label="Previous video"
+          >
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <polyline points="6 15 12 9 18 15" />
+            </svg>
+          </button>
+          <button
+            className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center hover:bg-[#333] transition"
+            onClick={nextVideo}
+            aria-label="Next video"
+          >
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+} 

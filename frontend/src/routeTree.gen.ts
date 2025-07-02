@@ -15,9 +15,13 @@ import { Route as IndexImport } from "./routes";
 import { Route as VideosImport } from "./routes/videos";
 import { Route as LivestreamImport } from "./routes/livestream";
 import { Route as ChallengesImport } from "./routes/challenges";
-import { Route as NftsImport } from "./routes/nfts";
-import { Route as ProfileImport } from "./routes/profile";
+import { Route as NftsImport } from "./routes/nfts";;
 import { Route as UploadImport } from "./routes/upload";
+import { Route as LiveDetailsImport } from "./routes/live/$username";
+import { Route as ProfileImport } from "./routes/u/$username";
+import { Route as SearchImport } from "./routes/search";
+import { Route as ShortVideoImport } from "./routes/s/$videoId";
+import { Route as VideoImport } from "./routes/v/$videoId";
 
 // Create/Update Routes
 const IndexRoute = IndexImport.update({
@@ -50,15 +54,39 @@ const NftsRoute = NftsImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
-const ProfileRoute = ProfileImport.update({
-  id: "/profile",
-  path: "/profile",
-  getParentRoute: () => rootRoute,
-} as any);
-
 const UploadRoute = UploadImport.update({
   id: "/upload",
   path: "/upload",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const LiveDetailsRoute = LiveDetailsImport.update({
+  id: "/live/$username",
+  path: "/live/$username",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const ProfileRoute = ProfileImport.update({
+  id: "/u/$username",
+  path: "/u/$username",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const SearchRoute = SearchImport.update({
+  id: "/search",
+  path: "/search",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const ShortVideoRoute = ShortVideoImport.update({
+  id: "/s/$videoId",
+  path: "/s/$videoId",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const VideoRoute = VideoImport.update({
+  id: "/v/$videoId",
+  path: "/v/$videoId",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -115,6 +143,41 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof UploadRoute;
       parentRoute: typeof rootRoute;
     };
+    "/live/$username": {
+      id: "/live/$username";
+      path: "/live/$username";
+      fullPath: "/live/$username";
+      preLoaderRoute: typeof LiveDetailsRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/u/$username": {
+      id: "/u/$username";
+      path: "/u/$username";
+      fullPath: "/u/$username";
+      preLoaderRoute: typeof ProfileRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/search": {
+      id: "/search";
+      path: "/search";
+      fullPath: "/search";
+      preLoaderRoute: typeof SearchRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/s/$videoId": {
+      id: "/s/$videoId";
+      path: "/s/$videoId";
+      fullPath: "/s/$videoId";
+      preLoaderRoute: typeof ShortVideoRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/v/$videoId": {
+      id: "/v/$videoId";
+      path: "/v/$videoId";
+      fullPath: "/v/$videoId";
+      preLoaderRoute: typeof VideoRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -128,6 +191,11 @@ export interface FileRoutesByFullPath {
   "/nfts": typeof NftsRoute;
   "/profile": typeof ProfileRoute;
   "/upload": typeof UploadRoute;
+  "/live/$username": typeof LiveDetailsRoute;
+  "/u/$username": typeof ProfileRoute;
+  "/search": typeof SearchRoute;
+  "/s/$videoId": typeof ShortVideoRoute;
+  "/v/$videoId": typeof VideoRoute;
 }
 
 export interface FileRoutesByTo {
@@ -138,6 +206,11 @@ export interface FileRoutesByTo {
   "/nfts": typeof NftsRoute;
   "/profile": typeof ProfileRoute;
   "/upload": typeof UploadRoute;
+  "/live/$username": typeof LiveDetailsRoute;
+  "/u/$username": typeof ProfileRoute;
+  "/search": typeof SearchRoute;
+  "/s/$videoId": typeof ShortVideoRoute;
+  "/v/$videoId": typeof VideoRoute;
 }
 
 export interface FileRoutesById {
@@ -149,6 +222,11 @@ export interface FileRoutesById {
   "/nfts": typeof NftsRoute;
   "/profile": typeof ProfileRoute;
   "/upload": typeof UploadRoute;
+  "/live/$username": typeof LiveDetailsRoute;
+  "/u/$username": typeof ProfileRoute;
+  "/search": typeof SearchRoute;
+  "/s/$videoId": typeof ShortVideoRoute;
+  "/v/$videoId": typeof VideoRoute;
 }
 
 export interface FileRouteTypes {
@@ -161,8 +239,13 @@ export interface FileRouteTypes {
     | "/nfts"
     | "/profile"
     | "/upload"
+    | "/live/$username"
+    | "/u/$username"
+    | "/search"
+    | "/s/$videoId"
+    | "/v/$videoId"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/videos" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/upload";
+  to: "/" | "/videos" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/upload" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId";
   id:
     | "__root__"
     | "/"
@@ -172,6 +255,11 @@ export interface FileRouteTypes {
     | "/nfts"
     | "/profile"
     | "/upload"
+    | "/live/$username"
+    | "/u/$username"
+    | "/search"
+    | "/s/$videoId"
+    | "/v/$videoId"
   fileRoutesById: FileRoutesById;
 }
 
@@ -183,6 +271,11 @@ export interface RootRouteChildren {
   NftsRoute: typeof NftsRoute;
   ProfileRoute: typeof ProfileRoute;
   UploadRoute: typeof UploadRoute;
+  LiveDetailsRoute: typeof LiveDetailsRoute;
+  ProfileRoute: typeof ProfileRoute;
+  SearchRoute: typeof SearchRoute;
+  ShortVideoRoute: typeof ShortVideoRoute;
+  VideoRoute: typeof VideoRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -193,6 +286,11 @@ const rootRouteChildren: RootRouteChildren = {
   NftsRoute: NftsRoute,
   ProfileRoute: ProfileRoute,
   UploadRoute: UploadRoute,
+  LiveDetailsRoute: LiveDetailsRoute,
+  ProfileRoute: ProfileRoute,
+  SearchRoute: SearchRoute,
+  ShortVideoRoute: ShortVideoRoute,
+  VideoRoute: VideoRoute,
 };
 
 export const routeTree = rootRoute

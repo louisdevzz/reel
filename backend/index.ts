@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import streamKeyRoutes from "./src/routes/streamKeyRoutes";
 import streamSessionRoutes from "./src/routes/streamSessionRoutes";
+import userRoutes from "./src/routes/userRoutes";
+import videoRoutes from "./src/routes/videoRoutes";
 import { streamSessionService } from "./src/services/streamSessionService";
 import { WebSocketServer } from 'ws';
 import http from 'http';
@@ -19,12 +21,24 @@ const RTMP_PORT = 1935;
 const HLS_PORT = 8000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1gb' }));
+app.use(express.urlencoded({ extended: true, limit: '1gb' }));
 
 app.use("/api/stream-keys", streamKeyRoutes);
 app.use("/api/sessions", streamSessionRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/videos", videoRoutes);
 // app.use("/api/chat", chatRoutes); // nếu có
 app.use('/live', express.static(path.join(__dirname, 'media/live')));
+
+// Global error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
 
 app.get("/", (req, res) => {
   res.send("Streaming backend is running!");
