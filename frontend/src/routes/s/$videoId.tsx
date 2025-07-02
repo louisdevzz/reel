@@ -1,6 +1,9 @@
 import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { apiService } from '../../lib/apiService'
+import { viewTrackingService } from '../../lib/viewTrackingService'
+import { useUser } from '../../lib/userContext'
+import { CommentSection } from '../../components/CommentSection'
 
 export const Route = createFileRoute('/s/$videoId')({
   component: ShortVideoPage,
@@ -17,9 +20,23 @@ function ShortVideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
-  const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set())
   const [hasInteracted, setHasInteracted] = useState(false)
   const [preloadedVideoElements, setPreloadedVideoElements] = useState<{[id: string]: HTMLVideoElement | null}>({})
+  const [showComments, setShowComments] = useState(false)
+
+  const { currentUser } = useUser()
+  const currentUserId = currentUser?.id
+  const [engagementStates, setEngagementStates] = useState<{[videoId: string]: {
+    isLiked: boolean
+    isBookmarked: boolean
+    likeCount: number
+    commentCount: number
+    shareCount: number
+    bookmarkCount: number
+  }}>({})
+  const [viewTrackingActive, setViewTrackingActive] = useState(false)
+  const [comments, setComments] = useState<{[videoId: string]: any[]}>({})
+  const [commentsLoading, setCommentsLoading] = useState<{[videoId: string]: boolean}>({})
 
   // Fetch all shorts and current video
   useEffect(() => {
@@ -27,7 +44,6 @@ function ShortVideoPage() {
       try {
         setLoading(true)
         const allShorts = await apiService.getShorts()
-        console.log('Fetched shorts:', allShorts)
         
         if (allShorts.length === 0) {
           setError('No videos available')
@@ -54,6 +70,87 @@ function ShortVideoPage() {
 
     fetchVideos()
   }, [videoId])
+
+  // Initialize engagement states for videos
+  useEffect(() => {
+    if (!currentUserId || videos.length === 0) return;
+
+    // Chỉ check trạng thái like/bookmark cho video hiện tại và lân cận
+    const indicesToCheck = [currentVideoIndex];
+    if (currentVideoIndex > 0) indicesToCheck.push(currentVideoIndex - 1);
+    if (currentVideoIndex < videos.length - 1) indicesToCheck.push(currentVideoIndex + 1);
+
+    const states: {[videoId: string]: any} = {};
+    for (const video of videos) {
+      states[video.id] = {
+        isLiked: false, // mặc định chưa like
+        isBookmarked: false, // mặc định chưa bookmark
+        likeCount: video.likes || 0,
+        commentCount: video.comments || 0,
+        shareCount: video.shares || 0,
+        bookmarkCount: video.bookmarks || 0
+      };
+    }
+    setEngagementStates(states);
+
+    // Chỉ gọi API check trạng thái cho video hiện tại và lân cận
+    indicesToCheck.forEach(async (idx) => {
+      const video = videos[idx];
+      if (!video) return;
+      try {
+        const [isLiked, isBookmarked] = await Promise.all([
+          apiService.isShortLiked(currentUserId, video.id),
+          apiService.isShortBookmarked(currentUserId, video.id)
+        ]);
+        setEngagementStates(prev => ({
+          ...prev,
+          [video.id]: {
+            ...prev[video.id],
+            isLiked,
+            isBookmarked
+          }
+        }));
+      } catch (error) {
+        // ignore
+      }
+    });
+  }, [currentUserId, videos, currentVideoIndex]);
+
+  // Start view tracking when video changes
+  useEffect(() => {
+    const currentVideo = videos[currentVideoIndex]
+    if (!currentVideo || !currentUserId) return
+
+    const startTracking = async () => {
+      try {
+        // Stop previous tracking
+        if (viewTrackingActive) {
+          await viewTrackingService.stopTracking()
+        }
+
+        // Start tracking new video
+        const success = await viewTrackingService.startTracking(
+          currentVideo.id,
+          'shorts',
+          currentUserId
+        )
+
+        if (success) {
+          setViewTrackingActive(true)
+        }
+      } catch (error) {
+        console.error('Error starting view tracking:', error)
+      }
+    }
+
+    startTracking()
+
+    // Cleanup on unmount
+    return () => {
+      viewTrackingService.stopTracking()
+      setViewTrackingActive(false)
+    }
+  }, [currentVideoIndex, videos, currentUserId, viewTrackingActive])
 
   // Preload next and previous videos with hidden video elements
   const preloadVideoElement = useCallback((videoId: string) => {
@@ -96,6 +193,9 @@ function ShortVideoPage() {
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keyboard events when comments are open
+      if (showComments) return
+      
       if (e.key === 'ArrowDown' || e.key === ' ') {
         e.preventDefault()
         nextVideo()
@@ -110,11 +210,11 @@ function ShortVideoPage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentVideoIndex, videos.length])
+  }, [currentVideoIndex, videos.length, showComments])
 
   // Handle scroll navigation with improved debouncing
   useEffect(() => {
-    let scrollTimeout: number
+    let scrollTimeout: ReturnType<typeof setTimeout>
     
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
@@ -173,10 +273,19 @@ function ShortVideoPage() {
   }, [isScrolling, currentVideoIndex, videos.length])
 
   const currentVideo = videos[currentVideoIndex]
+  const currentEngagement = engagementStates[currentVideo?.id] || {
+    isLiked: false,
+    isBookmarked: false,
+    likeCount: 0,
+    commentCount: 0,
+    shareCount: 0,
+    bookmarkCount: 0
+  }
 
   const navigateToVideo = useCallback((index: number) => {
     if (index >= 0 && index < videos.length) {
       const video = videos[index]
+      setShowComments(false)
       navigate({ to: '/s/$videoId', params: { videoId: video.id } })
     }
   }, [navigate, videos])
@@ -191,9 +300,262 @@ function ShortVideoPage() {
   const previousVideo = useCallback(() => {
     const prevIndex = currentVideoIndex === 0 ? videos.length - 1 : currentVideoIndex - 1
     setCurrentVideoIndex(prevIndex)
-    setIsPlaying(false)
     navigateToVideo(prevIndex)
   }, [currentVideoIndex, videos.length, navigateToVideo])
+
+  const handleVideoClick = () => {
+    if (videoRef.current) {
+      if (!hasInteracted) setHasInteracted(true)
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleTip = () => {
+    // TODO: Implement tipping functionality with Aptos
+    console.log('Tip sent to', currentVideo.creator || 'Unknown Creator')
+  }
+
+  const handleLike = async () => {
+    if (!currentUserId || !currentVideo) return
+
+    try {
+      const newIsLiked = !currentEngagement.isLiked
+      
+      // Optimistic update
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          isLiked: newIsLiked,
+          likeCount: newIsLiked 
+            ? prev[currentVideo.id].likeCount + 1 
+            : prev[currentVideo.id].likeCount - 1
+        }
+      }))
+
+      // API call
+      if (newIsLiked) {
+        await apiService.addShortLike(currentUserId, currentVideo.id)
+      } else {
+        await apiService.removeShortLike(currentUserId, currentVideo.id)
+      }
+
+      console.log(`${newIsLiked ? 'Liked' : 'Unliked'} video`, currentVideo.id)
+    } catch (error) {
+      console.error('Error handling like:', error)
+      // Show error message to user
+      // Revert optimistic update on error
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          isLiked: !prev[currentVideo.id].isLiked,
+          likeCount: !prev[currentVideo.id].isLiked 
+            ? prev[currentVideo.id].likeCount + 1 
+            : prev[currentVideo.id].likeCount - 1
+        }
+      }))
+    }
+  }
+
+  const handleComment = async (content?: string) => {
+    if (!currentUserId || !currentVideo) return;
+    let commentContent = content;
+    if (!commentContent) {
+      commentContent = prompt('Add a comment:') || '';
+    }
+    if (!commentContent.trim()) return;
+    // Optimistic update
+    const tempComment = {
+      id: 'temp-' + Date.now(),
+      userId: currentUserId,
+      username: currentUser?.username,
+      avatar: currentUser?.avatar,
+      content: commentContent.trim(),
+      createdAt: new Date().toISOString(),
+      pending: true
+    };
+    setComments(prev => ({
+      ...prev,
+      [currentVideo.id]: [tempComment, ...(prev[currentVideo.id] || [])]
+    }));
+    setEngagementStates(prev => ({
+      ...prev,
+      [currentVideo.id]: {
+        ...prev[currentVideo.id],
+        commentCount: prev[currentVideo.id].commentCount + 1
+      }
+    }));
+    try {
+      const comment = await apiService.addShortComment(
+        currentVideo.id,
+        currentUserId,
+        commentContent.trim()
+      );
+      if (comment) {
+        // Transform the returned comment to match frontend structure
+        const transformedComment = {
+          id: comment.comment.id,
+          userId: comment.comment.userId,
+          username: comment.user.username,
+          avatar: comment.user.avatar,
+          content: comment.comment.content,
+          createdAt: comment.comment.createdAt,
+          likeCount: 0,
+          replyCount: 0,
+          replies: [],
+          pending: false
+        };
+        setComments(prev => ({
+          ...prev,
+          [currentVideo.id]: [
+            transformedComment,
+            ...(prev[currentVideo.id] || []).filter(c => c.id !== tempComment.id)
+          ]
+        }));
+      }
+    } catch (error) {
+      setComments(prev => ({
+        ...prev,
+        [currentVideo.id]: (prev[currentVideo.id] || []).filter(c => c.id !== tempComment.id)
+      }));
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          commentCount: Math.max(0, prev[currentVideo.id].commentCount - 1)
+        }
+      }));
+    }
+  };
+
+  const handleShare = async () => {
+    if (!currentUserId || !currentVideo) return
+
+    try {
+      // Create share URL
+      const shareUrl = `${window.location.origin}/s/${currentVideo.id}`
+      
+      // Try to use native sharing if available
+      if (navigator.share) {
+        await navigator.share({
+          title: currentVideo.title || 'Check out this video!',
+          text: currentVideo.description || 'Amazing content on our platform',
+          url: shareUrl
+        })
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareUrl)
+      }
+
+      // Record share in backend
+      await apiService.addShortShare(
+        currentVideo.id,
+        currentUserId,
+        'web',
+        shareUrl
+      )
+
+      // Update share count
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          shareCount: prev[currentVideo.id].shareCount + 1
+        }
+      }))
+
+      console.log('Shared video', currentVideo.id)
+    } catch (error) {
+      console.error('Error sharing video:', error)
+    }
+  }
+
+  const handleBookmark = async () => {
+    if (!currentUserId || !currentVideo) return
+
+    try {
+      const newIsBookmarked = !currentEngagement.isBookmarked
+      
+      // Optimistic update
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          isBookmarked: newIsBookmarked,
+          bookmarkCount: newIsBookmarked 
+            ? prev[currentVideo.id].bookmarkCount + 1 
+            : prev[currentVideo.id].bookmarkCount - 1
+        }
+      }))
+
+      // API call
+      if (newIsBookmarked) {
+        await apiService.addShortBookmark(currentUserId, currentVideo.id)
+      } else {
+        await apiService.removeShortBookmark(currentUserId, currentVideo.id)
+      }
+    } catch (error) {
+      console.error('Error handling bookmark:', error)
+      // Revert optimistic update on error
+      setEngagementStates(prev => ({
+        ...prev,
+        [currentVideo.id]: {
+          ...prev[currentVideo.id],
+          isBookmarked: !prev[currentVideo.id].isBookmarked,
+          bookmarkCount: !prev[currentVideo.id].isBookmarked 
+            ? prev[currentVideo.id].bookmarkCount + 1 
+            : prev[currentVideo.id].bookmarkCount - 1
+        }
+      }))
+    }
+  }
+
+  // Fetch comments when comment section opens
+  useEffect(() => {
+    if (currentVideo && !comments[currentVideo.id] && !commentsLoading[currentVideo.id]) {
+      const fetchComments = async () => {
+        try {
+          setCommentsLoading(prev => ({ ...prev, [currentVideo.id]: true }));
+          const fetchedComments = await apiService.getShortComments(currentVideo.id);
+          // Transform the backend comment structure to match frontend expectations
+          const transformedComments = fetchedComments.map((item: any) => ({
+            id: item.comment.id,
+            userId: item.comment.userId,
+            username: item.user.username,
+            avatar: item.user.avatar,
+            content: item.comment.content,
+            createdAt: item.comment.createdAt,
+            likeCount: 0, // Default values for now
+            replyCount: item.replies?.length || 0,
+            replies: item.replies?.map((reply: any) => ({
+              id: reply.comment.id,
+              userId: reply.comment.userId,
+              username: reply.user.username,
+              avatar: reply.user.avatar,
+              content: reply.comment.content,
+              createdAt: reply.comment.createdAt,
+              likeCount: 0
+            })) || []
+          }));
+          setComments(prev => ({
+            ...prev,
+            [currentVideo.id]: transformedComments
+          }));
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        } finally {
+          setCommentsLoading(prev => ({ ...prev, [currentVideo.id]: false }));
+        }
+      };
+      fetchComments();
+    }
+  }, [showComments, currentVideo, comments, commentsLoading]);
 
   if (loading) {
     return (
@@ -242,43 +604,6 @@ function ShortVideoPage() {
     )
   }
 
-  const handleVideoClick = () => {
-    if (videoRef.current) {
-      if (!hasInteracted) setHasInteracted(true)
-      if (isPlaying) {
-        videoRef.current.pause()
-      } else {
-        videoRef.current.play()
-      }
-      setIsPlaying(!isPlaying)
-    }
-  }
-
-  const handleTip = () => {
-    // TODO: Implement tipping functionality with Aptos
-    console.log('Tip sent to', currentVideo.creator || 'Unknown Creator')
-  }
-
-  const handleLike = () => {
-    // TODO: Implement like functionality
-    console.log('Liked video', currentVideo.id)
-  }
-
-  const handleComment = () => {
-    // TODO: Implement comment functionality
-    console.log('Comment on video', currentVideo.id)
-  }
-
-  const handleShare = () => {
-    // TODO: Implement share functionality
-    console.log('Share video', currentVideo.id)
-  }
-
-  const handleBookmark = () => {
-    // TODO: Implement bookmark functionality
-    console.log('Bookmark video', currentVideo.id)
-  }
-
   return (
     <div 
       ref={containerRef}
@@ -319,29 +644,35 @@ function ShortVideoPage() {
                 <span className="text-white text-lg leading-none">+</span>
               </button>
             </div>
-            <button className="flex flex-col items-center group" onClick={handleLike}>
-              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+            <button 
+              className={`flex flex-col items-center group ${currentEngagement.isLiked ? 'text-red-500' : ''}`} 
+              onClick={handleLike}
+            >
+              <div className={`w-10 h-10 rounded-full ${currentEngagement.isLiked ? 'bg-red-500' : 'bg-[#222]'} flex items-center justify-center mb-1 group-hover:bg-[#333] transition`}>
                 <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
               </div>
-              <span className="text-white text-xs font-semibold">{currentVideo.likes || 0}</span>
+              <span className="text-white text-xs font-semibold">{currentEngagement.likeCount}</span>
             </button>
-            <button className="flex flex-col items-center group" onClick={handleComment}>
+            <button className="flex flex-col items-center group" onClick={() => setShowComments(true)}>
               <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </div>
-              <span className="text-white text-xs font-semibold">{currentVideo.comments || 0}</span>
+              <span className="text-white text-xs font-semibold">{comments[currentVideo.id]?.length || 0}</span>
             </button>
-            <button className="flex flex-col items-center group" onClick={handleBookmark}>
-              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
+            <button 
+              className={`flex flex-col items-center group ${currentEngagement.isBookmarked ? 'text-yellow-400' : ''}`} 
+              onClick={handleBookmark}
+            >
+              <div className={`w-10 h-10 rounded-full ${currentEngagement.isBookmarked ? 'bg-yellow-500' : 'bg-[#222]'} flex items-center justify-center mb-1 group-hover:bg-[#333] transition`}>
                 <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M5 3a2 2 0 0 0-2 2v16l9-4 9 4V5a2 2 0 0 0-2-2H5z"/>
                 </svg>
               </div>
-              <span className="text-white text-xs font-semibold">{currentVideo.bookmarks || 0}</span>
+              <span className="text-white text-xs font-semibold">{currentEngagement.bookmarkCount}</span>
             </button>
             <button className="flex flex-col items-center group" onClick={handleShare}>
               <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center mb-1 group-hover:bg-[#333] transition">
@@ -351,11 +682,11 @@ function ShortVideoPage() {
                   <line x1="12" y1="2" x2="12" y2="15"/>
                 </svg>
               </div>
-              <span className="text-white text-xs font-semibold">{currentVideo.shares || 0}</span>
+              <span className="text-white text-xs font-semibold">{currentEngagement.shareCount}</span>
             </button>
           </div>
         </div>
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2">
+        <div className={`absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 ${showComments ? 'hidden' : ''}`}>
           <button
             className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center mb-2 hover:bg-[#333] transition"
             onClick={previousVideo}
@@ -375,6 +706,15 @@ function ShortVideoPage() {
             </svg>
           </button>
         </div>
+        <CommentSection
+          open={showComments}
+          onClose={() => setShowComments(false)}
+          videoId={currentVideo.id}
+          currentUser={currentUser}
+          comments={comments[currentVideo.id] || []}
+          onAddComment={async (content) => handleComment(content)}
+          loading={!!commentsLoading[currentVideo.id]}
+        />
       </div>
     </div>
   )

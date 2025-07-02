@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { userService } from '../services/userService'
+import { redisService } from '../services/redisService'
 
 export class UserController {
   // Get all users
@@ -382,6 +383,360 @@ export class UserController {
       res.status(500).json({
         success: false,
         message: 'Failed to search by category',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Bookmark methods (shorts only)
+  async addShortBookmark(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.body
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const bookmark = await userService.addShortBookmark(userId, shortId)
+      res.status(201).json({
+        success: true,
+        data: bookmark,
+        message: 'Short bookmarked successfully',
+      })
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('already bookmarked')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        })
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add bookmark',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async removeShortBookmark(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.body
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const removed = await userService.removeShortBookmark(userId, shortId)
+      if (!removed) {
+        return res.status(404).json({
+          success: false,
+          message: 'Bookmark not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Bookmark removed successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to remove bookmark',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async getUserShortBookmarks(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      const limit = parseInt(req.query.limit as string) || 20
+      const offset = parseInt(req.query.offset as string) || 0
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const bookmarks = await userService.getUserShortBookmarks(userId, limit, offset)
+      res.json({
+        success: true,
+        data: bookmarks,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch bookmarks',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async isShortBookmarked(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.query
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const isBookmarked = await userService.isShortBookmarked(userId as string, shortId as string)
+      res.json({
+        success: true,
+        data: { isBookmarked },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to check bookmark status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Like methods for videos
+  async addVideoLike(req: Request, res: Response) {
+    try {
+      const { userId, videoId } = req.body
+
+      if (!userId || !videoId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Video ID are required',
+        })
+      }
+
+      const like = await userService.addVideoLike(userId, videoId)
+      res.status(201).json({
+        success: true,
+        data: like,
+        message: 'Video liked successfully',
+      })
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('already liked')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        })
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add like',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async removeVideoLike(req: Request, res: Response) {
+    try {
+      const { userId, videoId } = req.body
+
+      if (!userId || !videoId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Video ID are required',
+        })
+      }
+
+      const removed = await userService.removeVideoLike(userId, videoId)
+      if (!removed) {
+        return res.status(404).json({
+          success: false,
+          message: 'Like not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Like removed successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to remove like',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async getUserVideoLikes(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      const limit = parseInt(req.query.limit as string) || 20
+      const offset = parseInt(req.query.offset as string) || 0
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const likes = await userService.getUserVideoLikes(userId, limit, offset)
+      res.json({
+        success: true,
+        data: likes,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch video likes',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async isVideoLiked(req: Request, res: Response) {
+    try {
+      const { userId, videoId } = req.query
+
+      if (!userId || !videoId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Video ID are required',
+        })
+      }
+
+      const isLiked = await userService.isVideoLiked(userId as string, videoId as string)
+      res.json({
+        success: true,
+        data: { isLiked },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to check like status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Like methods for shorts
+  async addShortLike(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.body
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const like = await userService.addShortLike(userId, shortId)
+      res.status(201).json({
+        success: true,
+        data: like,
+        message: 'Short liked successfully',
+      })
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('already liked')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        })
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add like',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async removeShortLike(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.body
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const removed = await userService.removeShortLike(userId, shortId)
+      if (!removed) {
+        return res.status(404).json({
+          success: false,
+          message: 'Like not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Like removed successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to remove like',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async getUserShortLikes(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      const limit = parseInt(req.query.limit as string) || 20
+      const offset = parseInt(req.query.offset as string) || 0
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const likes = await userService.getUserShortLikes(userId, limit, offset)
+      res.json({
+        success: true,
+        data: likes,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch short likes',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async isShortLiked(req: Request, res: Response) {
+    try {
+      const { userId, shortId } = req.query
+
+      if (!userId || !shortId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and Short ID are required',
+        })
+      }
+
+      const isLiked = await userService.isShortLiked(userId as string, shortId as string)
+      res.json({
+        success: true,
+        data: { isLiked },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to check like status',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
     }

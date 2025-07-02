@@ -57,8 +57,8 @@ export function Sidebar({ isExpanded }: SidebarProps) {
               <div className="text-[#adadb8] text-xs">Loading...</div>
             ) : (
               <ul className="space-y-1">
-                {categories.map((category) => (
-                  <li key={category.name}>
+                {categories.map((category,index) => (
+                  <li key={index}>
                     {/* Main Category */}
                     <div 
                       className="flex items-center justify-between group hover:bg-[#27272e] rounded px-2 py-1 cursor-pointer"
