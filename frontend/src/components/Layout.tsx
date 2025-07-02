@@ -84,13 +84,11 @@ export function Layout({
       </button>
       <Sidebar isExpanded={isSidebarExpanded} />
       <div className="flex-1 flex flex-col min-h-screen transition-all duration-300">
-        <header className="fixed top-0 left-0 right-0 h-16 bg-[#18181b] border-b border-[#2f2f35] flex items-center px-6 z-20">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-[#18181b] border-b border-[#2f2f35] flex items-center px-10 z-20">
           <div className="flex-1 flex items-center">
-            <Link to="/" className="flex items-center space-x-2 mr-6">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-lg">R</span>
-              </div>
-              <span className="text-white font-bold text-xl">Reel</span>
+            <Link to="/" className="flex items-center space-x-2 mr-20">
+              <img src="/logo-light-rmbg.png" alt="logo" className="w-8 h-8" />
+              <span className="text-white font-bold text-2xl">Reel</span>
             </Link>
             
             <SearchBar className="w-full max-w-md" />

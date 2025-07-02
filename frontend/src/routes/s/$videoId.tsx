@@ -560,12 +560,12 @@ function ShortVideoPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#18181b]">
-        <div className="flex flex-row flex-1 justify-center items-center gap-4">
+        <div className="flex flex-row flex-1 justify-center items-end gap-4">
           <div className="flex justify-center items-center relative mt-4">
             <div className="w-[360px] h-[640px] bg-black rounded-lg animate-pulse" />
           </div>
-          <div className="flex flex-col gap-3">
-            {[...Array(4)].map((_, i) => (
+          <div className="flex flex-col gap-4">
+            {[...Array(5)].map((_, i) => (
               <div key={i} className="w-10 h-10 rounded-full bg-black animate-pulse mb-2" />
             ))}
           </div>

@@ -214,7 +214,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             }
           }}
           placeholder="Search users, categories..."
-          className="w-full max-w-md px-4 py-2 pr-10 rounded bg-black border border-gray-600 text-white focus:outline-none focus:border-white placeholder-gray-400"
+          className="w-full max-w-md px-4 py-2 pr-10 rounded bg-transparent border border-gray-600 text-white focus:outline-none focus:border-white placeholder-gray-400"
         />
         {/* Search Icon */}
         <button
