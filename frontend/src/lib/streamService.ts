@@ -1,166 +1,168 @@
-import { StreamKey, StreamSettings, generateStreamKey, generateId } from './streamUtils'
+import { apiService } from './apiService'
+import { StreamKey, StreamSettings} from './streamUtils'
 
-// Mock storage for stream keys (in real app, this would be an API)
+// Helper function to convert apiService StreamKey to streamUtils StreamKey
+function convertApiStreamKey(apiKey: any): StreamKey {
+  return {
+    ...apiKey,
+    createdAt: new Date(apiKey.createdAt),
+    lastUsed: apiKey.lastUsed ? new Date(apiKey.lastUsed) : undefined
+  }
+}
+
+// Frontend service that uses the backend API
 class StreamKeyService {
-  private streamKeys: StreamKey[] = []
-  private streamSettings: StreamSettings[] = []
-
-  constructor() {
-    // Initialize with some mock data
-    this.loadFromStorage()
-  }
-
-  private loadFromStorage() {
-    try {
-      const storedKeys = localStorage.getItem('streamKeys')
-      const storedSettings = localStorage.getItem('streamSettings')
-      
-      if (storedKeys) {
-        this.streamKeys = JSON.parse(storedKeys).map((key: any) => ({
-          ...key,
-          createdAt: new Date(key.createdAt),
-          lastUsed: key.lastUsed ? new Date(key.lastUsed) : undefined
-        }))
-      }
-      
-      if (storedSettings) {
-        this.streamSettings = JSON.parse(storedSettings)
-      }
-    } catch (error) {
-      console.error('Error loading stream data:', error)
-    }
-  }
-
-  private saveToStorage() {
-    try {
-      localStorage.setItem('streamKeys', JSON.stringify(this.streamKeys))
-      localStorage.setItem('streamSettings', JSON.stringify(this.streamSettings))
-    } catch (error) {
-      console.error('Error saving stream data:', error)
-    }
-  }
-
   // Create a new stream key
-  async createStreamKey(name: string): Promise<StreamKey> {
-    const newKey: StreamKey = {
-      id: generateId(),
-      key: generateStreamKey(),
-      name,
-      isActive: true,
-      createdAt: new Date()
+  async createStreamKey(name: string, userId: string): Promise<StreamKey> {
+    try {
+      // For now, we'll use the existing method but we need to modify the backend to accept userId
+      const streamKey = await apiService.createStreamKey(name, userId)
+      if (!streamKey) {
+        throw new Error('Failed to create stream key')
+      }
+      return convertApiStreamKey(streamKey)
+    } catch (error) {
+      console.error('Error creating stream key:', error)
+      throw error
     }
-
-    this.streamKeys.push(newKey)
-    this.saveToStorage()
-    
-    return newKey
   }
 
   // Get all stream keys
   async getStreamKeys(): Promise<StreamKey[]> {
-    return [...this.streamKeys]
+    try {
+      const apiKeys = await apiService.getStreamKeys()
+      return apiKeys.map(convertApiStreamKey)
+    } catch (error) {
+      console.error('Error fetching stream keys:', error)
+      throw error
+    }
+  }
+
+  // Get stream key by username
+  async getStreamKeyByUsername(username: string): Promise<StreamKey | null> {
+    try {
+      const apiKey = await apiService.getStreamKeyByUsername(username);
+      return apiKey ? convertApiStreamKey(apiKey) : null;
+    } catch (error) {
+      console.error('Error fetching stream key by username:', error);
+      return null;
+    }
   }
 
   // Get a specific stream key
   async getStreamKey(id: string): Promise<StreamKey | null> {
-    return this.streamKeys.find(key => key.id === id) || null
+    try {
+      const apiKey = await apiService.getStreamKey(id)
+      return apiKey ? convertApiStreamKey(apiKey) : null
+    } catch (error) {
+      console.error('Error fetching stream key:', error)
+      return null
+    }
   }
 
   // Update stream key
   async updateStreamKey(id: string, updates: Partial<StreamKey>): Promise<StreamKey | null> {
-    const index = this.streamKeys.findIndex(key => key.id === id)
-    if (index === -1) return null
-
-    this.streamKeys[index] = { ...this.streamKeys[index], ...updates }
-    this.saveToStorage()
-    
-    return this.streamKeys[index]
+    try {
+      // Convert Date objects to strings for the API
+      const apiUpdates = {
+        ...updates,
+        createdAt: updates.createdAt?.toISOString(),
+        lastUsed: updates.lastUsed?.toISOString()
+      }
+      
+      const apiKey = await apiService.updateStreamKey(id, apiUpdates)
+      return apiKey ? convertApiStreamKey(apiKey) : null
+    } catch (error) {
+      console.error('Error updating stream key:', error)
+      throw error
+    }
   }
 
   // Delete stream key
   async deleteStreamKey(id: string): Promise<boolean> {
-    const index = this.streamKeys.findIndex(key => key.id === id)
-    if (index === -1) return false
-
-    this.streamKeys.splice(index, 1)
-    this.saveToStorage()
-    
-    return true
+    try {
+      return await apiService.deleteStreamKey(id)
+    } catch (error) {
+      console.error('Error deleting stream key:', error)
+      throw error
+    }
   }
 
   // Regenerate stream key
   async regenerateStreamKey(id: string): Promise<StreamKey | null> {
-    const index = this.streamKeys.findIndex(key => key.id === id)
-    if (index === -1) return null
-
-    this.streamKeys[index].key = generateStreamKey()
-    this.streamKeys[index].lastUsed = new Date()
-    this.saveToStorage()
-    
-    return this.streamKeys[index]
+    try {
+      // This method doesn't exist in apiService yet, so we'll need to add it
+      // For now, return null
+      return null
+    } catch (error) {
+      console.error('Error regenerating stream key:', error)
+      throw error
+    }
   }
 
-  // Save stream settings
+  // Save stream settings (still using localStorage for now)
   async saveStreamSettings(settings: StreamSettings): Promise<void> {
-    const existingIndex = this.streamSettings.findIndex(s => s.streamKey === settings.streamKey)
-    
-    if (existingIndex !== -1) {
-      this.streamSettings[existingIndex] = settings
-    } else {
-      this.streamSettings.push(settings)
+    try {
+      const storedSettings = localStorage.getItem('streamSettings')
+      const allSettings = storedSettings ? JSON.parse(storedSettings) : []
+      
+      const existingIndex = allSettings.findIndex((s: StreamSettings) => s.streamKey === settings.streamKey)
+      
+      if (existingIndex !== -1) {
+        allSettings[existingIndex] = settings
+      } else {
+        allSettings.push(settings)
+      }
+      
+      localStorage.setItem('streamSettings', JSON.stringify(allSettings))
+    } catch (error) {
+      console.error('Error saving stream settings:', error)
+      throw error
     }
-    
-    this.saveToStorage()
   }
 
   // Get stream settings
   async getStreamSettings(streamKey: string): Promise<StreamSettings | null> {
-    return this.streamSettings.find(s => s.streamKey === streamKey) || null
+    try {
+      const storedSettings = localStorage.getItem('streamSettings')
+      if (!storedSettings) return null
+      
+      const allSettings = JSON.parse(storedSettings)
+      return allSettings.find((s: StreamSettings) => s.streamKey === streamKey) || null
+    } catch (error) {
+      console.error('Error loading stream settings:', error)
+      return null
+    }
   }
 
   // Get all stream settings
   async getAllStreamSettings(): Promise<StreamSettings[]> {
-    return [...this.streamSettings]
-  }
-
-  // Start streaming (mock function)
-  async startStream(streamKey: string): Promise<{ success: boolean; message: string }> {
-    // In a real app, this would connect to your streaming server
-    const key = this.streamKeys.find(k => k.key === streamKey)
-    if (!key) {
-      return { success: false, message: 'Invalid stream key' }
+    try {
+      const storedSettings = localStorage.getItem('streamSettings')
+      return storedSettings ? JSON.parse(storedSettings) : []
+    } catch (error) {
+      console.error('Error loading stream settings:', error)
+      return []
     }
-
-    // Update last used time
-    key.lastUsed = new Date()
-    this.saveToStorage()
-
-    // Simulate stream start
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, message: 'Stream started successfully' })
-      }, 1000)
-    })
   }
 
-  // Stop streaming (mock function)
-  async stopStream(streamKey: string): Promise<{ success: boolean; message: string }> {
-    // In a real app, this would disconnect from your streaming server
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, message: 'Stream stopped successfully' })
-      }, 500)
-    })
+  // Get all live streams (active sessions)
+  async getLiveStreams() {
+    try {
+      return await apiService.getActiveSessions();
+    } catch (error) {
+      console.error('Error fetching live streams:', error);
+      return [];
+    }
   }
 
-  // Get stream status (mock function)
-  async getStreamStatus(streamKey: string): Promise<{ isLive: boolean; viewers: number; duration: number }> {
-    // In a real app, this would check actual stream status
-    const isLive = Math.random() > 0.7 // 30% chance of being live for demo
-    return {
-      isLive,
-      viewers: isLive ? Math.floor(Math.random() * 1000) : 0,
-      duration: isLive ? Math.floor(Math.random() * 3600) : 0
+  // Get live session by stream key
+  async getLiveSessionByStreamKey(streamKey: string) {
+    try {
+      return await apiService.getLiveSessionByStreamKey(streamKey);
+    } catch (error) {
+      console.error('Error fetching live session:', error);
+      return null;
     }
   }
 }

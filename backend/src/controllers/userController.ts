@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
 import { userService } from '../services/userService'
-import { redisService } from '../services/redisService'
 
 export class UserController {
   // Get all users
@@ -720,15 +719,16 @@ export class UserController {
   async isShortLiked(req: Request, res: Response) {
     try {
       const { userId, shortId } = req.query
-
+      
       if (!userId || !shortId) {
         return res.status(400).json({
           success: false,
-          message: 'User ID and Short ID are required',
+          message: 'User ID and short ID are required',
         })
       }
 
       const isLiked = await userService.isShortLiked(userId as string, shortId as string)
+      
       res.json({
         success: true,
         data: { isLiked },
@@ -736,7 +736,181 @@ export class UserController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        message: 'Failed to check like status',
+        message: 'Failed to check if short is liked',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Follow a user
+  async followUser(req: Request, res: Response) {
+    try {
+      const { followerId, followingId } = req.body
+      
+      if (!followerId || !followingId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Follower ID and following ID are required',
+        })
+      }
+
+      const follow = await userService.followUser(followerId, followingId)
+      
+      res.status(201).json({
+        success: true,
+        data: follow,
+      })
+    } catch (error) {
+      const statusCode = error instanceof Error && error.message.includes('not found') ? 404 : 500
+      res.status(statusCode).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to follow user',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Unfollow a user
+  async unfollowUser(req: Request, res: Response) {
+    try {
+      const { followerId, followingId } = req.body
+      
+      if (!followerId || !followingId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Follower ID and following ID are required',
+        })
+      }
+
+      const success = await userService.unfollowUser(followerId, followingId)
+      
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: 'Follow relationship not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'User unfollowed successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to unfollow user',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Check if following a user
+  async isFollowing(req: Request, res: Response) {
+    try {
+      const { followerId, followingId } = req.query
+      
+      if (!followerId || !followingId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Follower ID and following ID are required',
+        })
+      }
+
+      const isFollowing = await userService.isFollowing(followerId as string, followingId as string)
+      
+      res.json({
+        success: true,
+        data: { isFollowing },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to check follow status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Get user's followers
+  async getFollowers(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      const limit = parseInt(req.query.limit as string) || 20
+      const offset = parseInt(req.query.offset as string) || 0
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const followers = await userService.getFollowers(userId, limit, offset)
+      
+      res.json({
+        success: true,
+        data: followers,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch followers',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Get users that this user is following
+  async getFollowing(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      const limit = parseInt(req.query.limit as string) || 20
+      const offset = parseInt(req.query.offset as string) || 0
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const following = await userService.getFollowing(userId, limit, offset)
+      
+      res.json({
+        success: true,
+        data: following,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch following',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  // Get user's follow statistics
+  async getFollowStats(req: Request, res: Response) {
+    try {
+      const { userId } = req.params
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        })
+      }
+
+      const stats = await userService.getFollowStats(userId)
+      
+      res.json({
+        success: true,
+        data: stats,
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch follow stats',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
     }

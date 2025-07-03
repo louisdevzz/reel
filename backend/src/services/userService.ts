@@ -1,5 +1,5 @@
 import { eq, ilike, and, or, sql } from 'drizzle-orm'
-import { db, users, shortBookmarks, videoLikes, shortLikes, videos, shorts, type User, type NewUser, type ShortBookmark, type VideoLike, type ShortLike } from '../../db'
+import { db, users, shortBookmarks, videoLikes, shortLikes, videos, shorts, userFollows, type User, type NewUser, type ShortBookmark, type VideoLike, type ShortLike, type UserFollow } from '../../db'
 
 interface CreateUserRequest {
   username: string
@@ -582,6 +582,158 @@ class UserService {
     } catch (error) {
       console.error('Error checking if short is liked:', error)
       return false
+    }
+  }
+
+  // Follow methods
+  async followUser(followerId: string, followingId: string): Promise<UserFollow | null> {
+    try {
+      // Prevent self-following
+      if (followerId === followingId) {
+        throw new Error('Users cannot follow themselves')
+      }
+
+      // Check if both users exist
+      const [follower, following] = await Promise.all([
+        this.getUserById(followerId),
+        this.getUserById(followingId)
+      ])
+
+      if (!follower || !following) {
+        throw new Error('User not found')
+      }
+
+      // Start a transaction to update both follow table and user counts
+      const result = await db.transaction(async (tx) => {
+        // Add follow relationship
+        const followResult = await tx.insert(userFollows)
+          .values({ followerId, followingId })
+          .returning()
+        
+        // Update follower's following count
+        await tx.update(users)
+          .set({ following: sql`${users.following} + 1` })
+          .where(eq(users.id, followerId))
+        
+        // Update following user's followers count
+        await tx.update(users)
+          .set({ followers: sql`${users.followers} + 1` })
+          .where(eq(users.id, followingId))
+        
+        return followResult[0]
+      })
+      
+      return result || null
+    } catch (error) {
+      console.error('Error following user:', error)
+      // Check if it's a unique constraint violation (already following)
+      if (error instanceof Error && error.message.includes('duplicate key value')) {
+        throw new Error('Already following this user')
+      }
+      throw error
+    }
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      // Prevent self-unfollowing
+      if (followerId === followingId) {
+        throw new Error('Users cannot unfollow themselves')
+      }
+
+      const result = await db.transaction(async (tx) => {
+        // Remove follow relationship
+        const followResult = await tx.delete(userFollows)
+          .where(and(eq(userFollows.followerId, followerId), eq(userFollows.followingId, followingId)))
+          .returning()
+        
+        if (followResult.length > 0) {
+          // Update follower's following count
+          await tx.update(users)
+            .set({ following: sql`${users.following} - 1` })
+            .where(eq(users.id, followerId))
+          
+          // Update following user's followers count
+          await tx.update(users)
+            .set({ followers: sql`${users.followers} - 1` })
+            .where(eq(users.id, followingId))
+        }
+        
+        return followResult.length > 0
+      })
+      
+      return result
+    } catch (error) {
+      console.error('Error unfollowing user:', error)
+      return false
+    }
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      const result = await db.select()
+        .from(userFollows)
+        .where(and(eq(userFollows.followerId, followerId), eq(userFollows.followingId, followingId)))
+      
+      return result.length > 0
+    } catch (error) {
+      console.error('Error checking if following:', error)
+      return false
+    }
+  }
+
+  async getFollowers(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
+    try {
+      const result = await db.select({
+        user: users
+      })
+        .from(userFollows)
+        .innerJoin(users, eq(userFollows.followerId, users.id))
+        .where(eq(userFollows.followingId, userId))
+        .orderBy(userFollows.createdAt)
+        .limit(limit)
+        .offset(offset)
+      
+      return result.map(r => r.user)
+    } catch (error) {
+      console.error('Error fetching followers:', error)
+      return []
+    }
+  }
+
+  async getFollowing(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
+    try {
+      const result = await db.select({
+        user: users
+      })
+        .from(userFollows)
+        .innerJoin(users, eq(userFollows.followingId, users.id))
+        .where(eq(userFollows.followerId, userId))
+        .orderBy(userFollows.createdAt)
+        .limit(limit)
+        .offset(offset)
+      
+      return result.map(r => r.user)
+    } catch (error) {
+      console.error('Error fetching following:', error)
+      return []
+    }
+  }
+
+  async getFollowStats(userId: string): Promise<{ followers: number; following: number }> {
+    try {
+      const user = await this.getUserById(userId)
+      if (!user) {
+        return { followers: 0, following: 0 }
+      }
+      
+      return {
+        followers: user.followers,
+        following: user.following
+      }
+    } catch (error) {
+      console.error('Error fetching follow stats:', error)
+      return { followers: 0, following: 0 }
     }
   }
 }

@@ -6,7 +6,7 @@ export class StreamSessionController {
   // Get all sessions
   async getAllSessions(req: Request, res: Response) {
     try {
-      const sessions = streamSessionService.getAllSessions();
+      const sessions = await streamSessionService.getActiveSessions();
       res.json({
         success: true,
         data: sessions,
@@ -23,7 +23,7 @@ export class StreamSessionController {
   // Get active sessions
   async getActiveSessions(req: Request, res: Response) {
     try {
-      const sessions = streamSessionService.getActiveSessions();
+      const sessions = await streamSessionService.getActiveSessions();
       res.json({
         success: true,
         data: sessions,
@@ -48,7 +48,7 @@ export class StreamSessionController {
         });
       }
 
-      const session = streamSessionService.getSessionById(id);
+      const session = await streamSessionService.getSession(id);
       
       if (!session) {
         return res.status(404).json({
@@ -82,7 +82,7 @@ export class StreamSessionController {
         });
       }
 
-      const streamKey = streamKeyService.getStreamKeyById(streamKeyId);
+      const streamKey = await streamKeyService.getStreamKeyById(streamKeyId);
       if (!streamKey) {
         return res.status(404).json({
           success: false,
@@ -97,9 +97,8 @@ export class StreamSessionController {
         });
       }
 
-      const session = streamSessionService.createSession(
+      const session = await streamSessionService.createSession(
         streamKeyId,
-        streamKey.key,
         title,
         description
       );
@@ -128,7 +127,7 @@ export class StreamSessionController {
         });
       }
 
-      const session = streamSessionService.startStream(id);
+      const session = await streamSessionService.startSession(id);
       
       if (!session) {
         return res.status(404).json({
@@ -161,7 +160,7 @@ export class StreamSessionController {
         });
       }
 
-      const session = streamSessionService.stopStream(id);
+      const session = await streamSessionService.stopSession(id);
       
       if (!session) {
         return res.status(404).json({
@@ -178,6 +177,41 @@ export class StreamSessionController {
       res.status(500).json({
         success: false,
         message: 'Failed to stop stream',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Update session
+  async updateSession(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { title, description } = req.body;
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Session ID is required',
+        });
+      }
+
+      const session = await streamSessionService.updateSession(id, title, description);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Session not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: session,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update session',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -203,21 +237,18 @@ export class StreamSessionController {
         });
       }
 
-      const success = streamSessionService.updateViewerCount(id, viewerCount);
+      const updated = await streamSessionService.updateViewerCount(id, viewerCount);
       
-      if (!success) {
+      if (!updated) {
         return res.status(404).json({
           success: false,
           message: 'Session not found',
         });
       }
 
-      // Get the updated session to return
-      const session = streamSessionService.getSessionById(id);
-      
       res.json({
         success: true,
-        data: session,
+        data: updated,
       });
     } catch (error) {
       res.status(500).json({
@@ -239,18 +270,18 @@ export class StreamSessionController {
         });
       }
 
-      const stats = streamSessionService.getStreamStats(id);
+      const session = await streamSessionService.getSession(id);
       
-      if (!stats) {
+      if (!session) {
         return res.status(404).json({
           success: false,
-          message: 'Stream stats not found',
+          message: 'Session not found',
         });
       }
 
       res.json({
         success: true,
-        data: stats,
+        data: session,
       });
     } catch (error) {
       res.status(500).json({
@@ -274,9 +305,9 @@ export class StreamSessionController {
         });
       }
 
-      const success = streamSessionService.updateStreamStats(id, stats);
+      const session = await streamSessionService.getSession(id);
       
-      if (!success) {
+      if (!session) {
         return res.status(404).json({
           success: false,
           message: 'Session not found',
@@ -285,7 +316,7 @@ export class StreamSessionController {
 
       res.json({
         success: true,
-        message: 'Stream stats updated successfully',
+        data: session,
       });
     } catch (error) {
       res.status(500).json({
@@ -303,10 +334,44 @@ export class StreamSessionController {
       return res.status(400).json({ success: false, message: 'Missing or invalid stream key' });
     }
     try {
-      const isLive = streamSessionService.isStreamLive(key);
+      const session = await streamSessionService.getLiveSessionByStreamKey(key);
+      const isLive = !!session;
       res.json({ isLive });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to get stream status', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+
+  // Get live session by stream key
+  async getLiveSessionByStreamKey(req: Request, res: Response) {
+    try {
+      const { streamKey } = req.params;
+      if (!streamKey) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stream key is required',
+        });
+      }
+
+      const session = await streamSessionService.getLiveSessionByStreamKey(streamKey);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Live session not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: session,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get live session',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 } 

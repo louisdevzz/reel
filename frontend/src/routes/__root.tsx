@@ -1,7 +1,7 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Layout } from '../components/Layout'
-import { Toaster } from 'react-hot-toast'
+import { CustomToaster } from '../components/CustomToaster'
 import { UserRegistrationDialog } from '../components/UserRegistrationDialog'
 import { User } from '../types'
 import { apiService } from '../lib/apiService'
@@ -113,7 +113,7 @@ function RootComponent() {
         connectWallet={connectWallet}
         disconnectWallet={disconnectWallet}
       >
-        <Toaster />
+        <CustomToaster />
         <Outlet />
       </Layout>
       

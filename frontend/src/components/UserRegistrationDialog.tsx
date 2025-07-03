@@ -114,6 +114,10 @@ export function UserRegistrationDialog({
       } else if (formData.description.length < 10) {
         newErrors.description = 'Description must be at least 10 characters'
       }
+      
+      if (!formData.avatar.trim()) {
+        newErrors.avatar = 'Avatar is required'
+      }
     }
 
     setErrors(newErrors)
@@ -275,14 +279,14 @@ export function UserRegistrationDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Avatar URL</label>
+              <label className="block text-sm font-medium mb-2">Avatar URL *</label>
               <input
                 type="url"
                 value={formData.avatar}
                 onChange={(e) => setFormData(prev => ({ ...prev, avatar: e.target.value }))}
                 onKeyPress={handleKeyPress}
                 className="w-full bg-[#27272a] border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
-                placeholder="https://example.com/avatar.jpg (optional)"
+                placeholder="https://example.com/avatar.jpg"
               />
             </div>
           </div>

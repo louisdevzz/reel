@@ -1,9 +1,27 @@
 import NodeMediaServer from 'node-media-server';
 import { streamKeyService } from './src/services/streamKeyService';
+import { streamSessionService } from './src/services/streamSessionService';
+import { websocketService } from './src/services/websocketService';
 import dotenv from 'dotenv';
 import path from 'path';
 
+interface Stream {
+  id: string;
+  ip: string;
+  protocol: string;
+  streamHost: string;
+  streamApp: string;
+  streamName: string;
+  streamPath: string;
+  streamQuery: Record<string, string>;
+  createTime: number;
+  localAddress: string;
+  remotePort: number;
+}
+
 dotenv.config();
+
+console.log('[NodeMediaServer] Starting media server...');
 
 const config = {
   rtmp: {
@@ -50,52 +68,54 @@ const config = {
   },
 };
 
-
 const nms = new NodeMediaServer(config);
 
-// // Debug: Log all arguments for event handlers to determine correct signature
-// nms.on('preConnect', (...args) => {
-//   console.log('[NodeEvent on preConnect] args:', args);
-// });
-// nms.on('postConnect', (...args) => {
-//   console.log('[NodeEvent on postConnect] args:', args);
-// });
-// nms.on('doneConnect', (...args) => {
-//   console.log('[NodeEvent on doneConnect] args:', args);
-// });
-// nms.on('prePublish', (...args) => {
-//   console.log('[NodeEvent on prePublish] args:', args);
-// });
-// nms.on('postPublish', (session: any, StreamPath, args) => {
-//   console.log('[NodeEvent on postPublish]', { session, StreamPath, args });
 
-//   if (session && session.socket) {
-//     console.log(`[Stream started] path=${StreamPath}, ip=${session.socket.remoteAddress}`);
-//   }
-// });
-// nms.on('donePublish', (...args) => {
-//   console.log('[NodeEvent on donePublish] args:', args);
-// });
+// Handle stream start (postPublish)
+nms.on('postPublish', async (stream: any) => {
+  
+  // Extract stream key from stream name
+  const streamKey = stream.streamName;
+  if (streamKey) {
+    try {
+      console.log(`[NodeMediaServer] Processing stream start for key: ${streamKey}`);
+      
+      // First, get stream key data to ensure it exists
+      const streamKeyData = await streamKeyService.getStreamKeyByKey(streamKey);
+      if (!streamKeyData) {
+        return;
+      }
+    
+      await streamSessionService.updateStreamKeyLiveStatus(streamKey, true);
+      
+      // Broadcast status update to WebSocket clients
+      console.log(`[NodeMediaServer] Broadcasting status update for ${streamKey}`);
+      await websocketService.broadcastStatusUpdate(streamKey);
+      
+      console.log(`[NodeMediaServer] Stream started successfully for key: ${streamKey}`);
+    } catch (error) {
+      console.error('[NodeMediaServer] Error handling postPublish:', error);
+      console.error('[NodeMediaServer] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    }
+  }
+});
 
-// // Log lỗi toàn cục
-// process.on('uncaughtException', (err) => {
-//   console.error('[uncaughtException]', err);
-// });
-// process.on('unhandledRejection', (reason, promise) => {
-//   console.error('[unhandledRejection]', reason);
-// });
-
-// Initialize sample stream keys
-streamKeyService.initializeSampleData();
-console.log('📦 Sample stream keys initialized');
-
-// Debug: List available stream keys
-const availableKeys = streamKeyService.getAllStreamKeys();
-console.log('🧪 Available stream keys:', availableKeys.map(sk => ({
-  name: sk.name,
-  key: sk.key,
-  isActive: sk.isActive
-})));
+// Handle stream end (donePublish)
+nms.on('donePublish', async (stream: any) => {
+  // Extract stream key from stream name
+  const streamKey = stream.streamName;
+  if (streamKey) {
+    try {
+      console.log(`[NodeMediaServer] Processing stream end for key: ${streamKey}`);
+      
+      // Update stream key to isLive = false
+      await streamSessionService.updateStreamKeyLiveStatus(streamKey, false);
+      await websocketService.broadcastStatusUpdate(streamKey);
+    } catch (error) {
+      console.error('[NodeMediaServer] Error handling donePublish:', error);
+    }
+  }
+});
 
 nms.run();
 

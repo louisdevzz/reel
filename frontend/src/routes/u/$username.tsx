@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../componen
 import { Info, User2, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiService, User } from "../../lib/apiService";
+import { VideoThumbnail } from "../../components/VideoThumbnail";
+import { SocialMediaService, formatFollowerCount } from "../../lib/socialMediaService";
 
 export const Route = createFileRoute('/u/$username')({
     component: ProfilePage,
@@ -16,6 +18,14 @@ function ProfilePage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [videos, setVideos] = useState<any[]>([]);
+    const [shorts, setShorts] = useState<any[]>([]);
+    const [analytics, setAnalytics] = useState<any>(null);
+    const [videosLoading, setVideosLoading] = useState(true);
+    const [shortsLoading, setShortsLoading] = useState(true);
+    const [analyticsLoading, setAnalyticsLoading] = useState(true);
+    const [socialStats, setSocialStats] = useState<any>({});
+    const [socialStatsLoading, setSocialStatsLoading] = useState(true);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -41,6 +51,93 @@ function ProfilePage() {
         }
     }, [username]);
 
+    // Fetch user's videos and shorts
+    useEffect(() => {
+        const fetchUserContent = async () => {
+            if (!user) return;
+            
+            try {
+                setVideosLoading(true);
+                setShortsLoading(true);
+                
+                const [videosData, shortsData] = await Promise.all([
+                    apiService.getVideosByUser(user.id),
+                    apiService.getShortsByUser(user.id)
+                ]);
+                
+                setVideos(videosData);
+                setShorts(shortsData);
+            } catch (err) {
+                console.error('Error fetching user content:', err);
+            } finally {
+                setVideosLoading(false);
+                setShortsLoading(false);
+            }
+        };
+
+        fetchUserContent();
+    }, [user]);
+
+    // Fetch user analytics
+    useEffect(() => {
+        const fetchUserAnalytics = async () => {
+            if (!user) return;
+            
+            try {
+                setAnalyticsLoading(true);
+                const analyticsData = await apiService.getUserAnalytics(user.id);
+                setAnalytics(analyticsData);
+            } catch (err) {
+                console.error('Error fetching user analytics:', err);
+            } finally {
+                setAnalyticsLoading(false);
+            }
+        };
+
+        fetchUserAnalytics();
+    }, [user]);
+
+    // Fetch social media stats
+    useEffect(() => {
+        const fetchSocialMediaStats = async () => {
+            if (!user) return;
+            
+            try {
+                setSocialStatsLoading(true);
+                
+                const realStats = await SocialMediaService.getAllSocialMediaStats(
+                    {
+                        youtube: user.social?.youtube,
+                        // twitter: user.social?.twitter,
+                        // tiktok: user.social?.tiktok,
+                        // twitch: user.social?.twitch
+                    },
+                    {
+                        youtubeApiKey: process.env.PUBLIC_YOUTUBE_API_KEY,
+                        // twitterBearerToken: process.env.PUBLIC_TWITTER_BEARER_TOKEN,
+                        // tiktokRapidApiKey: process.env.PUBLIC_TIKTOK_RAPID_API_KEY,
+                        // twitchClientId: process.env.PUBLIC_TWITCH_CLIENT_ID,
+                        // twitchOAuthToken: process.env.PUBLIC_TWITCH_OAUTH_TOKEN
+                    }
+                );
+
+                const statsMap: any = {};
+                realStats.forEach(stat => {
+                    statsMap[stat.platform] = stat;
+                });
+                setSocialStats(statsMap);
+                
+                
+            } catch (err) {
+                console.error('Error fetching social media stats:', err);
+            } finally {
+                setSocialStatsLoading(false);
+            }
+        };
+
+        fetchSocialMediaStats();
+    }, [user]);
+
     const handleCopy = () => {
         if (user?.aptosAddress) {
             navigator.clipboard.writeText(user.aptosAddress);
@@ -48,65 +145,6 @@ function ProfilePage() {
             setTimeout(() => setCopied(false), 1200);
         }
     };
-
-    // Mock shorts data
-    const shorts = [
-        {
-            id: 1,
-            title: "Jutsu kaisen 🥵🔥",
-            thumbnail: "https://i.ytimg.com/vi/shorts1.jpg",
-            views: "0 lượt xem",
-        },
-        {
-            id: 2,
-            title: "Solo leveling 🔥🥵",
-            thumbnail: "https://i.ytimg.com/vi/shorts2.jpg",
-            views: "1 lượt xem",
-        },
-        {
-            id: 3,
-            title: "One-Punch Man: Saitama's Most Epic...",
-            thumbnail: "https://i.ytimg.com/vi/shorts3.jpg",
-            views: "2 lượt xem",
-        },
-        {
-            id: 4,
-            title: "🔥 Deku vs Flect Showdown - My Hero ...",
-            thumbnail: "https://i.ytimg.com/vi/shorts4.jpg",
-            views: "25 lượt xem",
-        },
-    ];
-
-    // Mock videos data (move from below)
-    const recommendedVideos = [
-        {
-            id: 1,
-            title: "ALL IN ONE | Cậu Bé Vô Tình Nhận Được Thần Giáo Vô Địch | Review Phim Anime Hay",
-            thumbnail: "https://i.ytimg.com/vi/1.jpg",
-            duration: "2:45:24",
-            views: "28 N lượt xem",
-            date: "3 ngày trước",
-        },
-        {
-            id: 2,
-            title: "ALL IN ONE | Chuyển Sinh Làm Nông Dân Tại Dị Giới | Review Anime Hay",
-            thumbnail: "https://i.ytimg.com/vi/2.jpg",
-            duration: "1:14:59",
-            views: "366 N lượt xem",
-            date: "11 ngày trước",
-        },
-        {
-            id: 3,
-            title: "ALL IN ONE | Chuyển Sinh với Năng Lực Cấp Thần Tại Dị Giới | Review Anime Hay",
-            thumbnail: "https://i.ytimg.com/vi/3.jpg",
-            duration: "1:20:20",
-            views: "551 N lượt xem",
-            date: "1 tháng trước",
-        },
-    ];
-    const videos = [
-        ...recommendedVideos,
-    ];
 
     if (loading) {
         return (
@@ -132,8 +170,8 @@ function ProfilePage() {
     }
 
     return (
-        <div className="bg-[#18181b] min-h-screen text-white">
-            <div className="flex flex-col flex-1 h-[calc(100vh-4rem)] overflow-y-auto">
+        <div className="bg-[#18181b] min-h-screen text-white w-full">
+            <div className="flex flex-col flex-1 h-[calc(100vh-4rem)] overflow-y-auto w-full">
                 <div className="relative">
                     <img
                         src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=1200&q=80"
@@ -182,10 +220,58 @@ function ProfilePage() {
 
                 <div className="flex flex-col lg:flex-row gap-8 px-6 lg:px-12">
                     <div className="flex gap-6 lg:gap-10 items-center justify-center lg:justify-start flex-wrap">
-                        <Stat icon={<FaTwitch className="text-[#9147ff] text-xl lg:text-2xl" />} label="twitch" value={user.social?.twitch ? "Active" : "N/A"} />
-                        <Stat icon={<FaTwitter className="text-[#1da1f2] text-xl lg:text-2xl" />} label="twitter" value={user.social?.twitter ? "Active" : "N/A"} />
-                        <Stat icon={<FaTiktok className="text-[#fff] text-xl lg:text-2xl" />} label="tik tok" value={user.social?.tiktok ? "Active" : "N/A"} />
-                        <Stat icon={<FaYoutube className="text-[#ff0000] text-xl lg:text-2xl" />} label="youtube" value={user.social?.youtube ? "Active" : "N/A"} />
+                        <Stat 
+                            icon={<FaTwitch className="text-[#9147ff] text-xl lg:text-2xl" />} 
+                            label="twitch" 
+                            value={
+                                socialStatsLoading 
+                                    ? "Loading..." 
+                                    : socialStats.twitch 
+                                        ? formatFollowerCount(socialStats.twitch.followers)
+                                        : user.social?.twitch 
+                                            ? "Active" 
+                                            : "N/A"
+                            } 
+                        />
+                        <Stat 
+                            icon={<FaTwitter className="text-[#1da1f2] text-xl lg:text-2xl" />} 
+                            label="twitter" 
+                            value={
+                                socialStatsLoading 
+                                    ? "Loading..." 
+                                    : socialStats.twitter 
+                                        ? formatFollowerCount(socialStats.twitter.followers)
+                                        : user.social?.twitter 
+                                            ? "Active" 
+                                            : "N/A"
+                            } 
+                        />
+                        <Stat 
+                            icon={<FaTiktok className="text-[#fff] text-xl lg:text-2xl" />} 
+                            label="tik tok" 
+                            value={
+                                socialStatsLoading 
+                                    ? "Loading..." 
+                                    : socialStats.tiktok 
+                                        ? formatFollowerCount(socialStats.tiktok.followers)
+                                        : user.social?.tiktok 
+                                            ? "Active" 
+                                            : "N/A"
+                            } 
+                        />
+                        <Stat 
+                            icon={<FaYoutube className="text-[#ff0000] text-xl lg:text-2xl" />} 
+                            label="youtube" 
+                            value={
+                                socialStatsLoading 
+                                    ? "Loading..." 
+                                    : socialStats.youtube 
+                                        ? formatFollowerCount(socialStats.youtube.followers)
+                                        : user.social?.youtube 
+                                            ? "Active" 
+                                            : "N/A"
+                            } 
+                        />
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="text-[#a1a1aa] text-xs font-semibold mb-1">ABOUT ME</div>
@@ -204,20 +290,15 @@ function ProfilePage() {
                         <div className="mb-4 max-h-[70vh] overflow-y-auto pr-2">
                             <div className="text-lg font-semibold mb-1">Description</div>
                             <div className="text-white text-sm mb-2">{user.description}</div>
-                            <div className="text-white text-sm mb-2">Gmail: {user.email}</div>
                             <div className="text-lg font-semibold mt-4 mb-2">Other Information</div>
                             <ul className="space-y-3 text-sm">
                                 <li className="flex items-center gap-3">
                                     <User2 className="w-5 h-5" />
-                                    <span className="bg-[#333] px-4 py-2 rounded-full font-bold select-all">{user.aptosAddress}</span>
+                                    <span className="bg-[#333] px-4 py-2 rounded-full font-bold select-all">{user.aptosAddress.substring(0, 7) + '...' + user.aptosAddress.substring(user.aptosAddress.length - 7)}</span>
                                     <button onClick={handleCopy} className="ml-1 p-1 rounded hover:bg-[#232323] transition-colors" title="Copy address">
                                         <Copy className="w-4 h-4" />
                                     </button>
                                     {copied && <span className="text-green-400 text-xs ml-2">Copied!</span>}
-                                </li>
-                                <li className="flex items-center gap-3">
-                                    <span className="bg-[#6366f1] text-white px-2 py-1 rounded text-xs font-medium">{user.category}</span>
-                                    <span className="bg-[#23243a] text-white px-2 py-1 rounded text-xs font-medium">{user.subCategory}</span>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <FaEnvelope className="w-5 h-5" />
@@ -245,7 +326,7 @@ function ProfilePage() {
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <FaPlay className="w-5 h-5" />
-                                    <span>{user.videos} videos</span>
+                                    <span>{user.videos + user.shorts} videos</span>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <FaChartLine className="w-5 h-5" />
@@ -280,46 +361,99 @@ function ProfilePage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                        <AnalyticsCard title="INFLUENCER RANK" value={`${user.rank}th`} subtext="↑ 2 positions vs previous day" />
-                        <AnalyticsCard title="TOTAL FOLLOWERS" value={user.followers.toLocaleString()} subtext="-2% vs previous day" />
-                        <AnalyticsCard title="TOTAL VIEWS" value={user.views.toLocaleString()} subtext="-" />
-                        <AnalyticsCard title="ENGAGEMENT RATE" value="3.8%" subtext="-" />
+                        <AnalyticsCard 
+                            title="INFLUENCER RANK" 
+                            value={`${user.rank}th`} 
+                            subtext="↑ 2 positions vs previous day" 
+                        />
+                        <AnalyticsCard 
+                            title="TOTAL FOLLOWERS" 
+                            value={user.followers.toLocaleString()} 
+                            subtext="-2% vs previous day" 
+                        />
+                        <AnalyticsCard 
+                            title="TOTAL VIEWS" 
+                            value={analyticsLoading ? "Loading..." : (analytics?.totalViews || user.views).toLocaleString()} 
+                            subtext="-" 
+                        />
+                        <AnalyticsCard 
+                            title="ENGAGEMENT RATE" 
+                            value={analyticsLoading ? "Loading..." : `${analytics?.engagementScore || 0}%`} 
+                            subtext="-" 
+                        />
                     </div>
                 </div>
 
                 <div className="px-6 lg:px-12 mt-10">
-                    <div className="flex items-center mb-4">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5f/YouTube_Short_Logo.png" alt="Shorts" className="w-6 h-6 mr-2" />
+                    <div className="flex items-center mb-4 space-x-2">
+                        <img src="/logo-light-rmbg.png" alt="Shorts" className="w-6 h-6" />
                         <span className="text-xl font-bold">Shorts</span>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                        {shorts.map((short) => (
-                            <div key={short.id} className="w-[214px] h-[394px] bg-[#18181b] rounded-lg overflow-hidden shadow flex-shrink-0 flex flex-col">
-                                <div className="w-[210px] h-[315px] overflow-hidden">
-                                    <img src={short.thumbnail} alt={short.title} className="w-full h-full object-cover" />
+                    {shortsLoading ? (
+                        <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366f1]"></div>
+                        </div>
+                    ) : shorts.length > 0 ? (
+                        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                            {shorts.map((short) => (
+                                <div key={short.id} className="w-[214px] h-[394px] bg-[#18181b] rounded-lg overflow-hidden shadow flex-shrink-0 flex flex-col">
+                                    <div className="w-[210px] h-[315px] overflow-hidden">
+                                        <VideoThumbnail
+                                            videoUrl={short.videoUrl}
+                                            title={short.title}
+                                            duration={short.duration}
+                                            className="w-full h-full"
+                                            showDuration={true}
+                                            fallbackThumbnail={short.thumbnail}
+                                            videoId={short.id}
+                                        />
+                                    </div>
+                                    <div className="p-2 flex-1 flex flex-col justify-between">
+                                        <div className="font-semibold text-sm line-clamp-2">{short.description.length > 20 ? short.description.slice(0, 20) + '...' : short.description}</div>
+                                        <div className="text-xs text-[#a1a1aa]">{short.views?.toLocaleString() || 0} views</div>
+                                    </div>
                                 </div>
-                                <div className="p-2 flex-1 flex flex-col justify-between">
-                                    <div className="font-semibold text-sm line-clamp-2">{short.title}</div>
-                                    <div className="text-xs text-[#a1a1aa] mt-1">{short.views}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-[#a1a1aa]">
+                            <p>No shorts uploaded yet</p>
+                        </div>
+                    )}
+                    <div className="border-b-2 border-[#27272a] pb-10 w-full -mt-5"/>
                 </div>
-
+                
                 <div className="px-6 lg:px-12 mt-8 mb-8">
                     <div className="text-xl font-bold mb-4">Video</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {videos.map((video: any) => (
-                            <div key={video.id} className="bg-[#18181b] rounded-lg overflow-hidden shadow">
-                                <img src={video.thumbnail} alt={video.title} className="w-full h-24 sm:h-28 lg:h-32 object-cover" />
-                                <div className="p-2">
-                                    <div className="font-semibold text-sm line-clamp-2">{video.title}</div>
-                                    <div className="text-xs text-[#a1a1aa]">{video.views}</div>
+                    {videosLoading ? (
+                        <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366f1]"></div>
+                        </div>
+                    ) : videos.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {videos.map((video: any) => (
+                                <div key={video.id} className="bg-[#18181b] rounded-lg overflow-hidden shadow">
+                                    <VideoThumbnail
+                                        videoUrl={video.videoUrl}
+                                        title={video.title}
+                                        duration={video.duration}
+                                        className="w-full h-24 sm:h-28 lg:h-32"
+                                        showDuration={true}
+                                        fallbackThumbnail={video.thumbnail}
+                                        videoId={video.id}
+                                    />
+                                    <div className="p-2">
+                                        <div className="font-semibold text-sm line-clamp-2">{video.title}</div>
+                                        <div className="text-xs text-[#a1a1aa]">{video.views?.toLocaleString() || 0} lượt xem</div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-[#a1a1aa]">
+                            <p>No videos uploaded yet</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

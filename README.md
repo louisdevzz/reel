@@ -1,9 +1,16 @@
-# Reel
+# 🎥 Reel – A Decentralized SocialFi Platform for Video and Livestreaming
 
-Reel is a full-stack live streaming platform, featuring a Bun/Express backend and a modern React frontend. The project is organized into two main folders:
+Reel is a decentralized platform that allows users to upload short videos, long-form videos, and livestreams to share knowledge, entertainment, or everyday life moments. Content creators can earn income through views, likes, follows, and tips from viewers using tokens.
 
-- `backend/` — Bun/Express API, streaming server, database, and media handling
-- `frontend/` — React web client for viewers and streamers
+But Reel isn't just for creators — regular users can also earn tokens by completing simple daily tasks, such as watching videos, interacting, or joining challenges. Earned tokens can be used to raise Pet NFTs — digital pets that can be upgraded, traded, or collected on a marketplace.
+
+## 🌟 Key Features
+
+- **Decentralized Content Creation**: Upload videos and livestream freely, without relying on centralized platforms
+- **Token Rewards System**: Earn tokens directly from views, interactions, and donations
+- **Daily Task System**: Complete simple daily tasks to earn tokens through engagement
+- **Pet NFT Ecosystem**: Raise and evolve Pet NFTs, which can be traded or collected
+- **Community Governance**: DAO system allowing users to vote on rewards and featured content
 
 ---
 

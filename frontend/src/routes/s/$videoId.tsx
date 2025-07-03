@@ -4,6 +4,7 @@ import { apiService } from '../../lib/apiService'
 import { viewTrackingService } from '../../lib/viewTrackingService'
 import { useUser } from '../../lib/userContext'
 import { CommentSection } from '../../components/CommentSection'
+import { Plus } from 'lucide-react'
 
 export const Route = createFileRoute('/s/$videoId')({
   component: ShortVideoPage,
@@ -37,7 +38,7 @@ function ShortVideoPage() {
   const [viewTrackingActive, setViewTrackingActive] = useState(false)
   const [comments, setComments] = useState<{[videoId: string]: any[]}>({})
   const [commentsLoading, setCommentsLoading] = useState<{[videoId: string]: boolean}>({})
-
+  const [isFollowing, setIsFollowing] = useState(false)
   // Fetch all shorts and current video
   useEffect(() => {
     const fetchVideos = async () => {
@@ -151,6 +152,31 @@ function ShortVideoPage() {
       setViewTrackingActive(false)
     }
   }, [currentVideoIndex, videos, currentUserId, viewTrackingActive])
+
+  // Fetch follow state and follower count when video or user changes
+  useEffect(() => {
+    const currentVideo = videos[currentVideoIndex]
+    if (!currentVideo) return
+    
+    const fetchFollowState = async () => {
+      if (!currentUserId || !currentVideo?.userId || currentUserId === currentVideo.userId) {
+        setIsFollowing(false)
+        return
+      }
+      
+      try {
+        const [following] = await Promise.all([
+          apiService.isFollowing(currentUserId, currentVideo.userId),
+        ])
+        setIsFollowing(following)
+      } catch (error) {
+        console.error('Error fetching follow state:', error)
+        setIsFollowing(false)
+      }
+    }
+    
+    fetchFollowState()
+  }, [currentUserId, currentVideoIndex, videos])
 
   // Preload next and previous videos with hidden video elements
   const preloadVideoElement = useCallback((videoId: string) => {
@@ -516,6 +542,33 @@ function ShortVideoPage() {
     }
   }
 
+  const handleFollow = async () => {
+    if (!currentUserId || !currentVideo?.userId) return
+
+    // Prevent self-following
+    if (currentUserId === currentVideo.userId) {
+      console.log('Cannot follow yourself')
+      return
+    }
+
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await apiService.unfollowUser(currentUserId, currentVideo.userId)
+        setIsFollowing(false)
+        console.log('Unfollowed user:', currentVideo.creator)
+      } else {
+        // Follow
+        await apiService.followUser(currentUserId, currentVideo.userId)
+        setIsFollowing(true)
+        console.log('Followed user:', currentVideo.creator)
+      }
+    } catch (error) {
+      console.error('Error handling follow:', error)
+      // You could add a toast notification here to show the error to the user
+    }
+  }
+
   // Fetch comments when comment section opens
   useEffect(() => {
     if (currentVideo && !comments[currentVideo.id] && !commentsLoading[currentVideo.id]) {
@@ -581,12 +634,6 @@ function ShortVideoPage() {
           <div className="text-red-400 text-6xl mb-4">⚠️</div>
           <div className="text-white text-xl mb-2">An error occurred</div>
           <div className="text-gray-400">{error}</div>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try again
-          </button>
         </div>
       </div>
     )
@@ -638,11 +685,16 @@ function ShortVideoPage() {
               <img
                 src={currentVideo.creatorAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}
                 alt={currentVideo.creator || 'Creator'}
-                className="w-10 h-10 rounded-full border-2 border-white"
+                className="w-11 h-11 rounded-full border-2 border-white"
               />
-              <button className="mt-[-10px] w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center border-2 border-black shadow hover:bg-pink-600 transition">
-                <span className="text-white text-lg leading-none">+</span>
-              </button>
+              {currentUserId !== currentVideo.userId && !isFollowing && (
+                <button 
+                  onClick={handleFollow} 
+                  className={`mt-[-10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-black shadow transition bg-pink-500 hover:bg-pink-600`}
+                >
+                  <Plus className="w-3 h-3 text-white" />
+                </button>
+              )}
             </div>
             <button 
               className={`flex flex-col items-center group ${currentEngagement.isLiked ? 'text-red-500' : ''}`} 

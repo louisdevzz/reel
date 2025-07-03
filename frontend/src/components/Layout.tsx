@@ -189,14 +189,14 @@ export function Layout({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-[#18181b] border border-[#232327] text-white">
                   <DropdownMenuItem className="text-white hover:bg-gray-800 cursor-pointer">
-                    <div className="flex flex-col">
+                    <Link to="/live/$username" params={{ username: user?.username || '' }} className="flex flex-col">
                       <span className="text-sm font-medium">
                         {user?.username ? user.fullName : 'Profile'}
                       </span>
                       <span className="text-xs text-gray-400">
                         {user?.username ? `@${user.username}` : getDisplayName()}
                       </span>
-                    </div>
+                    </Link>
                   </DropdownMenuItem>
                   {user && (
                     <>
