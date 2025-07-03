@@ -129,7 +129,6 @@ class ViewService {
           })
           .where(eq(shortViews.id, existing.id))
           .returning()
-        
         return result[0] || null
       }
 
@@ -157,6 +156,8 @@ class ViewService {
         
         return viewResult[0]
       })
+
+      console.log('result new view', result)
       
       return result || null
     } catch (error) {

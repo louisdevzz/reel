@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, jsonb, uuid, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, integer, jsonb, uuid, boolean, unique } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -160,6 +160,46 @@ export const shortViews = pgTable('short_views', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// Follow relationship table
+export const userFollows = pgTable('user_follows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  followerId: uuid('follower_id').notNull().references(() => users.id),
+  followingId: uuid('following_id').notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueFollow: unique().on(table.followerId, table.followingId),
+}))
+
+// Stream keys table - each user can only have one stream key
+export const streamKeys = pgTable('stream_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id).unique(),
+  key: text('key').notNull().unique(),
+  name: text('name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  isLive: boolean('is_live').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  lastUsed: timestamp('last_used'),
+})
+
+// Stream sessions table to track live streaming sessions
+export const streamSessions = pgTable('stream_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  streamKeyId: uuid('stream_key_id').notNull().references(() => streamKeys.id),
+  title: text('title'),
+  description: text('description'),
+  status: text('status').notNull().default('idle'), // 'idle' | 'live' | 'ended'
+  startedAt: timestamp('started_at'),
+  endedAt: timestamp('ended_at'),
+  viewerCount: integer('viewer_count').notNull().default(0),
+  maxViewerCount: integer('max_viewer_count').notNull().default(0),
+  totalDonation: integer('total_donation').notNull().default(0),
+  totalDonationCount: integer('total_donation_count').notNull().default(0),
+  duration: integer('duration').notNull().default(0), // in seconds
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Video = typeof videos.$inferSelect
@@ -183,4 +223,10 @@ export type NewShortShare = typeof shortShares.$inferInsert
 export type VideoView = typeof videoViews.$inferSelect
 export type NewVideoView = typeof videoViews.$inferInsert
 export type ShortView = typeof shortViews.$inferSelect
-export type NewShortView = typeof shortViews.$inferInsert 
+export type NewShortView = typeof shortViews.$inferInsert
+export type UserFollow = typeof userFollows.$inferSelect
+export type NewUserFollow = typeof userFollows.$inferInsert
+export type StreamKey = typeof streamKeys.$inferSelect
+export type NewStreamKey = typeof streamKeys.$inferInsert
+export type StreamSession = typeof streamSessions.$inferSelect
+export type NewStreamSession = typeof streamSessions.$inferInsert 

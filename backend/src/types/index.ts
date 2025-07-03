@@ -3,6 +3,7 @@ export interface StreamKey {
   key: string;
   name: string;
   isActive: boolean;
+  isLive?: boolean;
   createdAt: Date;
   lastUsed?: Date;
 }
@@ -81,3 +82,12 @@ export interface Short {
 
 // Re-export User type from Drizzle schema
 export type { User } from '../../db/schema'
+
+// Extended Request interface for authentication
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    username: string;
+    aptosAddress: string;
+  };
+}

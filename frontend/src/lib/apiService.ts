@@ -5,6 +5,7 @@ export interface StreamKey {
   key: string;
   name: string;
   isActive: boolean;
+  isLive?: boolean;
   createdAt: string;
   lastUsed?: string;
 }
@@ -104,6 +105,26 @@ class ApiService {
     }
   }
 
+  async getStreamKeyByUsername(username: string): Promise<StreamKey | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/username/${username}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get stream key by username:', error);
+      return null;
+    }
+  }
+
+  async getStreamKeyByUserId(userId: string): Promise<StreamKey | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get stream key by user ID:', error);
+      return null;
+    }
+  }
+
   async getStreamKey(id: string): Promise<StreamKey | null> {
     try {
       const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/${id}`);
@@ -114,11 +135,21 @@ class ApiService {
     }
   }
 
-  async createStreamKey(name: string): Promise<StreamKey | null> {
+  async getStreamKeyByKey(key: string): Promise<StreamKey | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/key/${key}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get stream key by key:', error);
+      return null;
+    }
+  }
+
+  async createStreamKey(name: string, userId: string): Promise<StreamKey | null> {
     try {
       const response = await this.request<{ success: boolean; data: StreamKey }>('/stream-keys', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, userId }),
       });
       return response.data;
     } catch (error) {
@@ -195,6 +226,16 @@ class ApiService {
     }
   }
 
+  async getLiveSessionByStreamKey(streamKey: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/sessions/live/${streamKey}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get live session by stream key:', error);
+      return null;
+    }
+  }
+
   async getSession(id: string): Promise<StreamSession | null> {
     try {
       const response = await this.request<{ success: boolean; data: StreamSession }>(`/sessions/${id}`);
@@ -238,6 +279,19 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Failed to stop stream:', error);
+      return null;
+    }
+  }
+
+  async updateSession(sessionId: string, title?: string, description?: string): Promise<StreamSession | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: StreamSession }>(`/sessions/${sessionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ title, description }),
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update session:', error);
       return null;
     }
   }
@@ -1087,6 +1141,75 @@ class ApiService {
     } catch (error) {
       console.error(`Failed to check ${action} status:`, error);
       return false;
+    }
+  }
+
+  // Follow APIs
+  async followUser(followerId: string, followingId: string): Promise<any> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>('/users/follow', {
+        method: 'POST',
+        body: JSON.stringify({ followerId, followingId }),
+      })
+      return response.data
+    } catch (error) {
+      console.error('Failed to follow user:', error)
+      // Re-throw the error so the frontend can handle it properly
+      throw error
+    }
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      await this.request<void>('/users/follow', {
+        method: 'DELETE',
+        body: JSON.stringify({ followerId, followingId }),
+      })
+      return true
+    } catch (error) {
+      console.error('Failed to unfollow user:', error)
+      // Re-throw the error so the frontend can handle it properly
+      throw error
+    }
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      const response = await this.request<{ success: boolean; data: { isFollowing: boolean } }>(`/users/follow/check?followerId=${followerId}&followingId=${followingId}`)
+      return response.data.isFollowing
+    } catch (error) {
+      console.error('Failed to check if following:', error)
+      return false
+    }
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: User[] }>(`/users/${userId}/followers`)
+      return response.data
+    } catch (error) {
+      console.error('Failed to get followers:', error)
+      return []
+    }
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: User[] }>(`/users/${userId}/following`)
+      return response.data
+    } catch (error) {
+      console.error('Failed to get following:', error)
+      return []
+    }
+  }
+
+  async getFollowStats(userId: string): Promise<{ followers: number; following: number }> {
+    try {
+      const response = await this.request<{ success: boolean; data: { followers: number; following: number } }>(`/users/${userId}/follow-stats`)
+      return response.data
+    } catch (error) {
+      console.error('Failed to get follow stats:', error)
+      return { followers: 0, following: 0 }
     }
   }
 }

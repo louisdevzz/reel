@@ -2,13 +2,17 @@ import { useState, useEffect } from 'react'
 import { StreamKey, apiService } from '../lib/apiService'
 import { copyToClipboard, formatStreamKey, downloadConfig, getOBSConfig, getSLOBSConfig, getYouTubeConfig, getFacebookConfig } from '../lib/streamUtils'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from './ui/dialog'
-import { OBSGuide } from './OBSGuide'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu'
+import { MoreVertical } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { useUser } from '../lib/userContext'
 
 interface StreamKeyManagerProps {
   onStreamKeySelect?: (streamKey: string) => void
 }
 
 export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
+  const { currentUser, isConnected } = useUser()
   const [streamKeys, setStreamKeys] = useState<StreamKey[]>([])
   const [selectedKey, setSelectedKey] = useState<StreamKey | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -23,8 +27,13 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   const [loadingKeys, setLoadingKeys] = useState(true)
 
   useEffect(() => {
-    loadStreamKeys()
-  }, [])
+    if (isConnected && currentUser) {
+      loadStreamKeys()
+    } else {
+      setLoadingKeys(false)
+      setStreamKeys([])
+    }
+  }, [isConnected, currentUser])
 
   const loadStreamKeys = async () => {
     setLoadingKeys(true)
@@ -42,14 +51,16 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   }
 
   const handleCreateKey = async () => {
-    if (!newKeyName.trim()) return
+    if (!newKeyName.trim() || !currentUser) return
 
     setLoading(true)
     try {
-      const newKey = await apiService.createStreamKey(newKeyName.trim())
-      setStreamKeys(prev => [...prev, newKey])
-      setNewKeyName('')
-      setShowCreateDialog(false)
+      const newKey = await apiService.createStreamKey(newKeyName.trim(), currentUser.id)
+      if (newKey) {
+        setStreamKeys(prev => [...prev, newKey])
+        setNewKeyName('')
+        setShowCreateDialog(false)
+      }
     } catch (error) {
       console.error('Error creating stream key:', error)
     } finally {
@@ -84,17 +95,19 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   }
 
   const confirmRegenerateKey = async () => {
-    if (!keyToRegenerate) return
+    if (!keyToRegenerate || !currentUser) return
 
     try {
       // For now, we'll create a new key with the same name and delete the old one
       // since the backend doesn't have a regenerate endpoint yet
-      const newKey = await apiService.createStreamKey(keyToRegenerate.name)
-      await apiService.deleteStreamKey(keyToRegenerate.id)
-      
-      setStreamKeys(prev => prev.map(key => key.id === keyToRegenerate.id ? newKey : key))
-      if (selectedKey?.id === keyToRegenerate.id) {
-        setSelectedKey(newKey)
+      const newKey = await apiService.createStreamKey(keyToRegenerate.name, currentUser.id)
+      if (newKey) {
+        await apiService.deleteStreamKey(keyToRegenerate.id)
+        
+        setStreamKeys(prev => prev.map(key => key.id === keyToRegenerate.id ? newKey : key))
+        if (selectedKey?.id === keyToRegenerate.id) {
+          setSelectedKey(newKey)
+        }
       }
       setShowRegenerateDialog(false)
       setKeyToRegenerate(null)
@@ -149,13 +162,12 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Stream Keys</h3>
         <div className="flex gap-2">
-          <OBSGuide streamKey={selectedKey?.key || ''} />
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition-colors">
                 Create New Key
               </button>
-                        </DialogTrigger>
+            </DialogTrigger>
             <DialogContent className="bg-zinc-900 text-white">
               <DialogHeader>
                 <DialogTitle>Create New Stream Key</DialogTitle>
@@ -194,7 +206,11 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
       </div>
 
       <div className="space-y-2">
-        {loadingKeys ? (
+        {!isConnected ? (
+          <div className="text-center py-8 text-gray-400">
+            <p>Please connect your wallet to manage stream keys.</p>
+          </div>
+        ) : loadingKeys ? (
           <div className="text-center py-8 text-gray-400">
             <p>Loading stream keys...</p>
           </div>
@@ -225,16 +241,11 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <code className="font-mono">{formatStreamKey(key.key)}</code>
-                    <button
-                      onClick={(e) => {
+                    <code onClick={(e) => {
                         e.stopPropagation()
                         handleCopyKey(key.key)
-                      }}
-                      className="text-purple-400 hover:text-purple-300"
-                    >
-                      {copied === key.key ? 'Copied!' : 'Copy'}
-                    </button>
+                        toast.success('Copied to clipboard')
+                      }} className="font-mono hover:text-white">{formatStreamKey(key.key)}</code>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     Created: {new Date(key.createdAt).toLocaleDateString()}
@@ -246,34 +257,46 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedKey(key)
-                      setShowConfigDialog(true)
-                    }}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    Config
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRegenerateKey(key)
-                    }}
-                    className="text-yellow-400 hover:text-yellow-300 text-sm"
-                  >
-                    Regenerate
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteKey(key)
-                    }}
-                    className="text-red-400 hover:text-red-300 text-sm"
-                  >
-                    Delete
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-zinc-800 border border-white/10 text-white">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedKey(key)
+                          setShowConfigDialog(true)
+                        }}
+                        className="text-blue-400 hover:text-blue-300 hover:bg-zinc-700 cursor-pointer"
+                      >
+                        Config
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRegenerateKey(key)
+                        }}
+                        className="text-yellow-400 hover:text-yellow-300 hover:bg-zinc-700 cursor-pointer"
+                      >
+                        Regenerate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteKey(key)
+                        }}
+                        className="text-red-400 hover:text-red-300 hover:bg-zinc-700 cursor-pointer"
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>

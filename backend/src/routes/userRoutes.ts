@@ -116,6 +116,37 @@ router.get('/likes/shorts/check', async (req, res) => {
   await userController.isShortLiked(req, res)
 })
 
+// Follow routes
+// POST /api/users/follow - Follow a user
+router.post('/follow', async (req, res) => {
+  await userController.followUser(req, res)
+})
+
+// DELETE /api/users/follow - Unfollow a user
+router.delete('/follow', async (req, res) => {
+  await userController.unfollowUser(req, res)
+})
+
+// GET /api/users/follow/check - Check if following a user
+router.get('/follow/check', async (req, res) => {
+  await userController.isFollowing(req, res)
+})
+
+// GET /api/users/:userId/followers - Get user's followers
+router.get('/:userId/followers', async (req, res) => {
+  await userController.getFollowers(req, res)
+})
+
+// GET /api/users/:userId/following - Get users that this user is following
+router.get('/:userId/following', async (req, res) => {
+  await userController.getFollowing(req, res)
+})
+
+// GET /api/users/:userId/follow-stats - Get user's follow statistics
+router.get('/:userId/follow-stats', async (req, res) => {
+  await userController.getFollowStats(req, res)
+})
+
 // GET /api/users/:id - Get user by ID (must come after specific routes)
 router.get('/:id', async (req, res) => {
   await userController.getUserById(req, res)

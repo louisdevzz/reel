@@ -1,108 +1,287 @@
-import { v4 as uuidv4 } from 'uuid';
-import type { StreamSession, StreamStats } from '../types';
+import { db } from '../../db'
+import { streamSessions, streamKeys, users } from '../../db/schema'
+import { eq, and, desc, sql } from 'drizzle-orm'
+import type { StreamSession } from '../../db/schema'
+import { websocketService } from './websocketService'
 
-class StreamSessionService {
-  private sessions: Map<string, StreamSession> = new Map();
-  private stats: Map<string, StreamStats> = new Map();
+export class StreamSessionService {
+  // Create a new stream session
+  async createSession(streamKeyId: string, title?: string, description?: string): Promise<StreamSession | null> {
+    try {
+      // Check if there's already an active session for this stream key
+      const existingSession = await db
+        .select()
+        .from(streamSessions)
+        .where(and(
+          eq(streamSessions.streamKeyId, streamKeyId),
+          eq(streamSessions.status, 'live')
+        ))
+        .limit(1)
+      
+      if (existingSession.length > 0 && existingSession[0]) {
+        console.log('Active session already exists for stream key:', streamKeyId)
+        return existingSession[0]
+      }
 
-  createSession(streamKeyId: string, streamKey: string, title?: string, description?: string): StreamSession {
-    const id = uuidv4();
-    
-    const session: StreamSession = {
-      id,
-      streamKeyId,
-      streamKey,
-      status: 'idle',
-      viewerCount: 0,
-      duration: 0,
-      title,
-      description,
-    };
-
-    this.sessions.set(id, session);
-    return session;
-  }
-
-  getSessionById(id: string): StreamSession | undefined {
-    return this.sessions.get(id);
-  }
-
-  getSessionByStreamKey(streamKey: string): StreamSession | undefined {
-    return Array.from(this.sessions.values()).find(session => session.streamKey === streamKey);
-  }
-
-  getActiveSessions(): StreamSession[] {
-    return Array.from(this.sessions.values()).filter(session => session.status === 'live');
-  }
-
-  startStream(sessionId: string): StreamSession | null {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return null;
+      const result = await db.insert(streamSessions).values({
+        streamKeyId,
+        title,
+        description,
+        status: 'idle'
+      }).returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error creating stream session:', error)
+      return null
     }
-
-    session.status = 'live';
-    session.startedAt = new Date();
-    this.sessions.set(sessionId, session);
-    return session;
   }
 
-  stopStream(sessionId: string): StreamSession | null {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return null;
+  // Start a stream session
+  async startSession(sessionId: string): Promise<StreamSession | null> {
+    try {
+      const result = await db.update(streamSessions)
+        .set({
+          status: 'live',
+          startedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(streamSessions.id, sessionId))
+        .returning()
+      
+      const session = result[0]
+      if (session) {
+        // Update stream key to isLive = true
+        await db.update(streamKeys)
+          .set({ isLive: true })
+          .where(eq(streamKeys.id, session.streamKeyId))
+        
+        // Get stream key to broadcast status
+        const streamKey = await db.select({ key: streamKeys.key })
+          .from(streamKeys)
+          .where(eq(streamKeys.id, session.streamKeyId))
+          .limit(1)
+        
+        if (streamKey[0]) {
+          // Broadcast status update via WebSocket
+          await websocketService.broadcastStatusUpdate(streamKey[0].key)
+        }
+      }
+      
+      return session || null
+    } catch (error) {
+      console.error('Error starting stream session:', error)
+      return null
     }
+  }
 
-    session.status = 'ended';
-    session.endedAt = new Date();
-    if (session.startedAt) {
-      session.duration = Math.floor((session.endedAt.getTime() - session.startedAt.getTime()) / 1000);
+  // Stop a stream session
+  async stopSession(sessionId: string): Promise<StreamSession | null> {
+    try {
+      const result = await db.update(streamSessions)
+        .set({
+          status: 'ended',
+          endedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(streamSessions.id, sessionId))
+        .returning()
+      
+      const session = result[0]
+      if (session) {
+        // Update stream key to isLive = false
+        await db.update(streamKeys)
+          .set({ isLive: false })
+          .where(eq(streamKeys.id, session.streamKeyId))
+        
+        // Get stream key to broadcast status
+        const streamKey = await db.select({ key: streamKeys.key })
+          .from(streamKeys)
+          .where(eq(streamKeys.id, session.streamKeyId))
+          .limit(1)
+        
+        if (streamKey[0]) {
+          // Broadcast status update via WebSocket
+          await websocketService.broadcastStatusUpdate(streamKey[0].key)
+        }
+      }
+      
+      return session || null
+    } catch (error) {
+      console.error('Error stopping stream session:', error)
+      return null
     }
-    this.sessions.set(sessionId, session);
-    return session;
   }
 
-  updateViewerCount(sessionId: string, count: number): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return false;
+  // Update session title and description
+  async updateSession(sessionId: string, title?: string, description?: string): Promise<StreamSession | null> {
+    try {
+      const updateData: any = {
+        updatedAt: new Date()
+      }
+      
+      if (title !== undefined) {
+        updateData.title = title
+      }
+      
+      if (description !== undefined) {
+        updateData.description = description
+      }
+
+      const result = await db.update(streamSessions)
+        .set(updateData)
+        .where(eq(streamSessions.id, sessionId))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error updating session:', error)
+      return null
     }
-
-    session.viewerCount = count;
-    this.sessions.set(sessionId, session);
-    return true;
   }
 
-  updateStreamStats(sessionId: string, stats: Omit<StreamStats, 'streamId'>): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return false;
+  // Update viewer count
+  async updateViewerCount(sessionId: string, viewerCount: number): Promise<StreamSession | null> {
+    try {
+      const result = await db.update(streamSessions)
+        .set({
+          viewerCount,
+          maxViewerCount: sql`GREATEST(max_viewer_count, ${viewerCount})`,
+          updatedAt: new Date()
+        })
+        .where(eq(streamSessions.id, sessionId))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error updating viewer count:', error)
+      return null
     }
-
-    this.stats.set(sessionId, {
-      streamId: sessionId,
-      ...stats,
-    });
-    return true;
   }
 
-  getStreamStats(sessionId: string): StreamStats | undefined {
-    return this.stats.get(sessionId);
+  // Add donation to session
+  async addDonation(sessionId: string, amount: number): Promise<StreamSession | null> {
+    try {
+      const result = await db.update(streamSessions)
+        .set({
+          totalDonation: sql`total_donation + ${amount}`,
+          totalDonationCount: sql`total_donation_count + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(streamSessions.id, sessionId))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error adding donation:', error)
+      return null
+    }
   }
 
-  getAllSessions(): StreamSession[] {
-    return Array.from(this.sessions.values());
+  // Get active sessions (currently live)
+  async getActiveSessions(): Promise<any[]> {
+    try {
+      const sessions = await db
+        .select()
+        .from(streamSessions)
+        .innerJoin(streamKeys, eq(streamSessions.streamKeyId, streamKeys.id))
+        .innerJoin(users, eq(streamKeys.userId, users.id))
+        .where(eq(streamSessions.status, 'live'))
+        .orderBy(desc(streamSessions.startedAt))
+      
+      return sessions
+    } catch (error) {
+      console.error('Error getting active sessions:', error)
+      return []
+    }
   }
 
-  deleteSession(sessionId: string): boolean {
-    this.stats.delete(sessionId);
-    return this.sessions.delete(sessionId);
+  // Get session by ID
+  async getSession(sessionId: string): Promise<any | null> {
+    try {
+      const result = await db
+        .select()
+        .from(streamSessions)
+        .innerJoin(streamKeys, eq(streamSessions.streamKeyId, streamKeys.id))
+        .innerJoin(users, eq(streamKeys.userId, users.id))
+        .where(eq(streamSessions.id, sessionId))
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error getting session:', error)
+      return null
+    }
   }
 
-  isStreamLive(streamKey: string): boolean {
-    const session = this.getSessionByStreamKey(streamKey);
-    return !!session && session.status === 'live';
+  // Get session by stream key
+  async getSessionByStreamKey(streamKey: string): Promise<any | null> {
+    try {
+      const result = await db
+        .select()
+        .from(streamSessions)
+        .innerJoin(streamKeys, eq(streamSessions.streamKeyId, streamKeys.id))
+        .innerJoin(users, eq(streamKeys.userId, users.id))
+        .where(eq(streamKeys.key, streamKey))
+        .orderBy(desc(streamSessions.createdAt))
+        .limit(1)
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error getting session by stream key:', error)
+      return null
+    }
+  }
+
+  // Get current live session by stream key
+  async getLiveSessionByStreamKey(streamKey: string): Promise<any | null> {
+    try {
+      const result = await db
+        .select()
+        .from(streamSessions)
+        .innerJoin(streamKeys, eq(streamSessions.streamKeyId, streamKeys.id))
+        .innerJoin(users, eq(streamKeys.userId, users.id))
+        .where(and(
+          eq(streamKeys.key, streamKey),
+          eq(streamSessions.status, 'live')
+        ))
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error getting live session by stream key:', error)
+      return null
+    }
+  }
+
+  // Get all sessions for a user
+  async getUserSessions(userId: string): Promise<StreamSession[]> {
+    try {
+      const sessions = await db
+        .select()
+        .from(streamSessions)
+        .innerJoin(streamKeys, eq(streamSessions.streamKeyId, streamKeys.id))
+        .where(eq(streamKeys.userId, userId))
+        .orderBy(desc(streamSessions.createdAt))
+      
+      return sessions.map(s => s.stream_sessions)
+    } catch (error) {
+      console.error('Error getting user sessions:', error)
+      return []
+    }
+  }
+
+  // Update stream key isLive status based on RTMP events
+  async updateStreamKeyLiveStatus(streamKey: string, isLive: boolean): Promise<void> {
+    try {
+      await db.update(streamKeys)
+        .set({ 
+          isLive,
+          lastUsed: isLive ? new Date() : undefined
+        })
+        .where(eq(streamKeys.key, streamKey))
+    } catch (error) {
+      console.error('Error updating stream key live status:', error)
+    }
   }
 }
 
-export const streamSessionService = new StreamSessionService(); 
+export const streamSessionService = new StreamSessionService() 

@@ -9,6 +9,21 @@ router.get('/', async (req, res) => {
   await streamKeyController.getAllStreamKeys(req, res);
 });
 
+// GET /api/stream-keys/username/:username - Get stream key by username
+router.get('/username/:username', async (req, res) => {
+  await streamKeyController.getStreamKeyByUsername(req, res);
+});
+
+// GET /api/stream-keys/user/:userId - Get stream key by user ID
+router.get('/user/:userId', async (req, res) => {
+  await streamKeyController.getStreamKeyByUserId(req, res);
+});
+
+// GET /api/stream-keys/key/:key - Get stream key by key value
+router.get('/key/:key', async (req, res) => {
+  await streamKeyController.getStreamKeyByKey(req, res);
+});
+
 // GET /api/stream-keys/:id - Get stream key by ID
 router.get('/:id', async (req, res) => {
   await streamKeyController.getStreamKeyById(req, res);
@@ -37,6 +52,11 @@ router.post('/:id/activate', async (req, res) => {
 // POST /api/stream-keys/:id/deactivate - Deactivate stream key
 router.post('/:id/deactivate', async (req, res) => {
   await streamKeyController.deactivateStreamKey(req, res);
+});
+
+// POST /api/stream-keys/:id/regenerate - Regenerate stream key
+router.post('/:id/regenerate', async (req, res) => {
+  await streamKeyController.regenerateStreamKey(req, res);
 });
 
 export default router; 

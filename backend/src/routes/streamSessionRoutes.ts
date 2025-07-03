@@ -34,6 +34,11 @@ router.post('/:id/stop', async (req, res) => {
   await streamSessionController.stopStream(req, res);
 });
 
+// PUT /api/sessions/:id - Update session
+router.put('/:id', async (req, res) => {
+  await streamSessionController.updateSession(req, res);
+});
+
 // PUT /api/sessions/:id/viewer-count - Update viewer count
 router.put('/:id/viewer-count', async (req, res) => {
   await streamSessionController.updateViewerCount(req, res);
@@ -52,6 +57,11 @@ router.put('/:id/stats', async (req, res) => {
 // GET /api/sessions/status - Get stream status by stream key
 router.get('/status', async (req, res) => {
   await streamSessionController.getStreamStatusByKey(req, res);
+});
+
+// GET /api/sessions/live/:streamKey - Get live session by stream key
+router.get('/live/:streamKey', async (req, res) => {
+  await streamSessionController.getLiveSessionByStreamKey(req, res);
 });
 
 export default router;

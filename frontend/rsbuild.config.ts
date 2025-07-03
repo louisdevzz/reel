@@ -8,6 +8,13 @@ export default defineConfig({
     pluginNodePolyfill()
   ],
   source: {
+    define:{
+      "process.env.PUBLIC_YOUTUBE_API_KEY": JSON.stringify(process.env.PUBLIC_YOUTUBE_API_KEY),
+      "process.env.PUBLIC_TWITTER_BEARER_TOKEN": JSON.stringify(process.env.PUBLIC_TWITTER_BEARER_TOKEN),
+      "process.env.PUBLIC_TIKTOK_RAPID_API_KEY": JSON.stringify(process.env.PUBLIC_TIKTOK_RAPID_API_KEY),
+      "process.env.PUBLIC_TWITCH_CLIENT_ID": JSON.stringify(process.env.PUBLIC_TWITCH_CLIENT_ID),
+      "process.env.PUBLIC_TWITCH_OAUTH_TOKEN": JSON.stringify(process.env.PUBLIC_TWITCH_OAUTH_TOKEN)
+    },
     entry: {
       index: "./src/main.tsx"
     }

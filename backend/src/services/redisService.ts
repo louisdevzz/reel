@@ -52,7 +52,7 @@ class RedisService {
     try {
       await this.connect()
       const key = `view:${contentType}:${contentId}:${sessionId}`
-      const ttl = 300 // 5 minutes
+      const ttl = 60 // 1 minute
       await this.client.setEx(key, ttl, JSON.stringify(data))
       return true
     } catch (error) {
@@ -81,7 +81,7 @@ class RedisService {
       if (existing) {
         const existingData = JSON.parse(existing)
         const updatedData = { ...existingData, ...data }
-        const ttl = 300 // 5 minutes
+        const ttl = 60 // 1 minute
         await this.client.setEx(key, ttl, JSON.stringify(updatedData))
         return true
       }
@@ -225,7 +225,7 @@ class RedisService {
     try {
       await this.connect()
       const key = `viewidmap:${viewId}`
-      await this.client.setEx(key, 300, JSON.stringify(data)) // TTL 5 phút
+      await this.client.setEx(key, 60, JSON.stringify(data)) // TTL 1 phút
       return true
     } catch (error) {
       console.error('Error setting viewId map:', error)
