@@ -25,7 +25,7 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingKeys, setLoadingKeys] = useState(true)
-
+  
   useEffect(() => {
     if (isConnected && currentUser) {
       loadStreamKeys()
@@ -38,9 +38,9 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   const loadStreamKeys = async () => {
     setLoadingKeys(true)
     try {
-      const keys = await apiService.getStreamKeys()
+      const keys = await apiService.getStreamKeyByUserId(currentUser?.id || '')
       // Ensure keys is always an array
-      setStreamKeys(Array.isArray(keys) ? keys : [])
+      setStreamKeys(keys ? [keys] : [])
     } catch (error) {
       console.error('Error loading stream keys:', error)
       // Set empty array on error to prevent mapping issues

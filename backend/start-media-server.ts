@@ -5,19 +5,6 @@ import { websocketService } from './src/services/websocketService';
 import dotenv from 'dotenv';
 import path from 'path';
 
-interface Stream {
-  id: string;
-  ip: string;
-  protocol: string;
-  streamHost: string;
-  streamApp: string;
-  streamName: string;
-  streamPath: string;
-  streamQuery: Record<string, string>;
-  createTime: number;
-  localAddress: string;
-  remotePort: number;
-}
 
 dotenv.config();
 
@@ -110,6 +97,17 @@ nms.on('donePublish', async (stream: any) => {
       
       // Update stream key to isLive = false
       await streamSessionService.updateStreamKeyLiveStatus(streamKey, false);
+      
+      // Stop the current live session if exists
+      const liveSession = await streamSessionService.getLiveSessionByStreamKey(streamKey);
+      if (liveSession && liveSession.stream_sessions && liveSession.stream_sessions.id) {
+        await streamSessionService.stopSession(liveSession.stream_sessions.id);
+        console.log(`[NodeMediaServer] Stopped live session for stream key: ${streamKey}`);
+      } else if (liveSession && liveSession.id) {
+        await streamSessionService.stopSession(liveSession.id);
+        console.log(`[NodeMediaServer] Stopped live session for stream key: ${streamKey}`);
+      }
+      
       await websocketService.broadcastStatusUpdate(streamKey);
     } catch (error) {
       console.error('[NodeMediaServer] Error handling donePublish:', error);

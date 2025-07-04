@@ -72,7 +72,6 @@ function LivestreamPage() {
         const userStreamKey = await apiService.getStreamKeyByUserId(currentUser.id)
         
         if (userStreamKey) {
-          console.log('🎥 Found user stream key:', userStreamKey.key, 'isLive:', userStreamKey.isLive)
           setStreamKey(userStreamKey.key)
           setIsLive(!!userStreamKey.isLive)
           
@@ -138,7 +137,6 @@ function LivestreamPage() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('🔍 Received stream status:', data);
         
         const wasLive = isLive
         setIsLive(!!data.isLive);
@@ -312,21 +310,6 @@ function LivestreamPage() {
         </div>
       )}
       
-      {!isConnecting && !isConnected && (
-        <div className="bg-red-500/20 border-b border-red-500/20 p-3 text-center">
-          <div className="flex items-center justify-center gap-4">
-            <span className="text-red-400 font-semibold">
-              ⚠️ Backend connection failed. Please ensure the backend server is running on http://localhost:3001
-            </span>
-            <button 
-              onClick={handleRetryConnection}
-              className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      )}
 
       {!userConnected && (
         <div className="bg-blue-500/20 border-b border-blue-500/20 p-3 text-center">
