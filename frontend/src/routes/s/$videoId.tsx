@@ -39,6 +39,24 @@ function ShortVideoPage() {
   const [comments, setComments] = useState<{[videoId: string]: any[]}>({})
   const [commentsLoading, setCommentsLoading] = useState<{[videoId: string]: boolean}>({})
   const [isFollowing, setIsFollowing] = useState(false)
+
+  // Update document title when video data is loaded
+  useEffect(() => {
+    const currentVideo = videos[currentVideoIndex];
+    if (currentVideo) {
+      const title = currentVideo.title || 'Untitled Video';
+      const creator = currentVideo.creator || 'Unknown Creator';
+      document.title = `${title} | ${creator} - Reel`;
+    } else if (videoId) {
+      document.title = `Video ${videoId} - Reel`;
+    }
+    
+    // Reset title when component unmounts
+    return () => {
+      document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+    };
+  }, [videos, currentVideoIndex, videoId]);
+
   // Fetch all shorts and current video
   useEffect(() => {
     const fetchVideos = async () => {

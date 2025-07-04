@@ -21,7 +21,7 @@
         "redis": "^4.6.13",
         "socket.io": "^4.8.1",
         "uuid": "^11.1.0",
-        "ws": "^8.18.0",
+        "ws": "^8.14.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -29,6 +29,7 @@
         "@types/express": "^5.0.3",
         "@types/node-media-server": "^2.3.7",
         "@types/uuid": "^10.0.0",
+        "@types/ws": "^8.5.10",
         "concurrently": "^9.2.0",
         "ts-node": "^10.9.2",
       },
@@ -333,6 +334,8 @@
     "@types/serve-static": ["@types/serve-static@1.15.8", "", { "dependencies": { "@types/http-errors": "*", "@types/node": "*", "@types/send": "*" } }, "sha512-roei0UY3LhpOJvjbIP6ZZFngyLKl5dskOtDhxY5THRSpO+ZI+nzJ+m5yUMzGrp89YRa7lvknKkMYjqQFGwA7Sg=="],
 
     "@types/uuid": ["@types/uuid@10.0.0", "", {}, "sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ=="],
+
+    "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 

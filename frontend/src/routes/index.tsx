@@ -1,15 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
 import { apiService, User } from '../lib/apiService'
-import React from 'react'
 import { Triangle } from 'lucide-react'
-import { streamKeyService } from '../lib/streamService'
-import { StreamPlayer } from '../components/StreamPlayer'
+import flvjs from 'flv.js';
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
-
 
 interface Video {
   id: string
@@ -65,6 +62,116 @@ function HomePage() {
     const remainingSeconds = seconds % 60
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
+
+  const getLivePreviewUrl = (streamKey: string) =>
+    `http://localhost:8000/live/${streamKey}.flv`;
+
+  const LiveStreamCard = ({ stream }: { stream: any }) => {
+    const streamSession = stream.stream_sessions;
+    const streamKey = stream.stream_keys?.key || stream.streamKey?.key || stream.streamKey || stream.key;
+    const user = stream.users;
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [snapshotTaken, setSnapshotTaken] = useState(false);
+
+    useEffect(() => {
+      if (!streamKey || !videoRef.current || !canvasRef.current) return;
+      let flvPlayer: flvjs.Player | null = null;
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      if (flvjs.isSupported()) {
+        flvPlayer = flvjs.createPlayer({
+          type: 'flv',
+          url: getLivePreviewUrl(streamKey),
+          isLive: true,
+        });
+
+        flvPlayer.attachMediaElement(video);
+        flvPlayer.load();
+
+        flvPlayer.on(flvjs.Events.METADATA_ARRIVED, () => {
+          setTimeout(() => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+            setSnapshotTaken(true);
+            flvPlayer?.destroy();
+          }, 1000); // Đợi 1s cho video có frame
+        });
+      }
+
+      return () => {
+        if (flvPlayer) flvPlayer.destroy();
+      };
+    }, [streamKey]);
+
+    return (
+      <Link
+        key={streamSession.id}
+        to="/live/$username"
+        params={{ username: user?.username }}
+        className="min-w-[340px] max-w-[340px] bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer relative"
+      >
+        <div className="relative">
+          {streamKey ? (
+            <>
+              {!snapshotTaken && (
+                <video
+                  ref={videoRef}
+                  className="w-full h-48 object-cover bg-black"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  style={{ display: 'block' }}
+                />
+              )}
+              <canvas
+                ref={canvasRef}
+                className="w-full h-48 object-cover bg-black"
+                style={{ display: snapshotTaken ? 'block' : 'none' }}
+              />
+            </>
+          ) : (
+            <div className="w-full h-48 bg-gradient-to-br from-purple-900/20 to-blue-900/20 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl mb-2">📺</div>
+                <div className="text-sm text-gray-400">Live Stream</div>
+              </div>
+            </div>
+          )}
+          <span className="absolute top-2 left-2 bg-red-600 text-xs font-bold px-2 py-1 rounded text-white z-10">LIVE</span>
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 px-2 py-1 rounded text-white text-sm font-medium z-10">
+            {streamSession.viewerCount >= 1000 ? `${(streamSession.viewerCount / 1000).toFixed(1)}K` : streamSession.viewerCount} viewers
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="flex items-start gap-2 mb-2">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs text-white">
+              <img src={user?.avatar} alt={user?.username} className="w-full h-full rounded-full" />
+            </div>
+            <div className='flex flex-col'>
+              <span className="text-base text-white">
+                {streamSession.title || 'No title'}
+              </span>
+              <span className="text-sm font-semibold text-white line-clamp-1">
+                {user?.username || 'Untitled user'}
+              </span>
+              <div className='flex items-center gap-2 mt-1'>
+                {user?.category && (
+                  <span className="bg-[#27272a] text-[#a78bfa] px-2 py-0.5 rounded text-xs font-semibold">{user.category}</span>
+                )}
+                {user?.subCategory && (
+                  <span className="bg-[#27272a] text-gray-300 px-2 py-0.5 rounded text-xs">{user.subCategory}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   const VideoCard = ({ video, isShort = false }: { video: Video; isShort?: boolean }) => {
     const videoRef = isShort ? React.useRef<HTMLVideoElement>(null) : null;
@@ -240,41 +347,7 @@ function HomePage() {
               <h2 className="text-2xl font-bold mb-6 text-red-400">Live channels we think you’ll like</h2>
               <div className="flex gap-4 overflow-x-auto pb-2">
                 {(showAllLive ? liveStreams : liveStreams.slice(0, 3)).map((stream: any) => (
-                  <Link
-                    key={stream.id}
-                    to="/live/$username"
-                    params={{ username: stream.user?.username || stream.streamKey?.key || stream.id }}
-                    className="min-w-[340px] max-w-[340px] bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer relative"
-                  >
-                    <div className="relative">
-                      {/* Stream preview (use StreamPlayer or fallback image) */}
-                      <div className="w-full h-48 bg-black flex items-center justify-center">
-                        <StreamPlayer streamKey={stream.streamKey?.key} />
-                      </div>
-                      {/* LIVE badge */}
-                      <span className="absolute top-2 left-2 bg-red-600 text-xs font-bold px-2 py-1 rounded text-white z-10">LIVE</span>
-                      {/* Viewers count */}
-                      <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 px-2 py-1 rounded text-white text-sm font-medium z-10">
-                        {stream.viewerCount >= 1000 ? `${(stream.viewerCount / 1000).toFixed(1)}K` : stream.viewerCount} viewers
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        {/* Avatar */}
-                        <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-xs text-white">
-                          {stream.user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <div className="text-base font-semibold text-white line-clamp-1">{stream.title || stream.user?.fullName || 'Untitled Stream'}</div>
-                      </div>
-                      {stream.description && (
-                        <div className="text-sm text-gray-400 mb-2 line-clamp-2">{stream.description}</div>
-                      )}
-                      {/* User info */}
-                      <div className="text-sm text-gray-400">
-                        {stream.user?.followers} followers
-                      </div>
-                    </div>
-                  </Link>
+                  <LiveStreamCard key={stream.id} stream={stream} />
                 ))}
               </div>
               {liveStreams.length > 3 && (

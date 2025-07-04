@@ -21,6 +21,26 @@ function SearchPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useState<SearchParams>({})
 
+  // Update document title based on search
+  useEffect(() => {
+    if (searchParams.q) {
+      document.title = `Search: "${searchParams.q}" - Reel`;
+    } else if (searchParams.category) {
+      if (searchParams.subCategory) {
+        document.title = `${searchParams.category} > ${searchParams.subCategory} - Reel`;
+      } else {
+        document.title = `${searchParams.category} - Reel`;
+      }
+    } else {
+      document.title = "Featured Users - Reel";
+    }
+    
+    // Reset title when component unmounts
+    return () => {
+      document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+    };
+  }, [searchParams.q, searchParams.category, searchParams.subCategory]);
+
   // Get search parameters from URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)

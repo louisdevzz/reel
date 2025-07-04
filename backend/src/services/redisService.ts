@@ -220,6 +220,78 @@ class RedisService {
     }
   }
 
+  // Chat methods
+  async addChatMessage(streamKey: string, messageData: string) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      await this.client.lPush(key, messageData)
+      return true
+    } catch (error) {
+      console.error('Error adding chat message:', error)
+      return false
+    }
+  }
+
+  async getChatMessages(streamKey: string, start: number = 0, end: number = -1) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      const messages = await this.client.lRange(key, start, end)
+      return messages
+    } catch (error) {
+      console.error('Error getting chat messages:', error)
+      return []
+    }
+  }
+
+  async trimChatMessages(streamKey: string, start: number = 0, end: number) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      await this.client.lTrim(key, start, end)
+      return true
+    } catch (error) {
+      console.error('Error trimming chat messages:', error)
+      return false
+    }
+  }
+
+  async setChatTTL(streamKey: string, ttl: number) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      await this.client.expire(key, ttl)
+      return true
+    } catch (error) {
+      console.error('Error setting chat TTL:', error)
+      return false
+    }
+  }
+
+  async getChatMessageCount(streamKey: string) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      return await this.client.lLen(key)
+    } catch (error) {
+      console.error('Error getting chat message count:', error)
+      return 0
+    }
+  }
+
+  async deleteChatMessages(streamKey: string) {
+    try {
+      await this.connect()
+      const key = `chat:${streamKey}`
+      await this.client.del(key)
+      return true
+    } catch (error) {
+      console.error('Error deleting chat messages:', error)
+      return false
+    }
+  }
+
   // Mapping viewId <-> (contentId, contentType, sessionId)
   async setViewIdMap(viewId: string, data: { contentId: string, contentType: 'video' | 'short', sessionId: string }) {
     try {

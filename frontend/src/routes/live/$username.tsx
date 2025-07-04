@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRightFromLine, MessageSquareText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRightFromLine } from "lucide-react";
 import { StreamPlayer } from "../../components/StreamPlayer";
+import { ChatSection } from "../../components/ChatSection";
 import { streamKeyService } from "../../lib/streamService";
 import { apiService, User } from "../../lib/apiService";
 
@@ -16,6 +17,20 @@ function LiveDetailsPage() {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<any | null>(null);
     const { username } = Route.useParams();
+
+    // Update document title when user data is loaded
+    useEffect(() => {
+        if (user) {
+            document.title = `${user.username} - Reel`;
+        } else if (username) {
+            document.title = `${username} - Reel`;
+        }
+        
+        // Reset title when component unmounts
+        return () => {
+            document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+        };
+    }, [user, username]);
 
     useEffect(() => {
         const fetchStreamKey = async () => {
@@ -112,12 +127,14 @@ function LiveDetailsPage() {
                                         alt="Streamer"
                                         className="w-16 h-16 rounded-full border-2 border-[#9147ff]"
                                     />
-                                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 text-xs font-bold px-2 py-0.5 rounded-full">LIVE</span>
+                                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 text-[9px] font-bold px-2 py-0.5 rounded-full">LIVE</span>
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-bold text-lg">{user?.username}</span>
-                                        <span className="bg-[#9147ff] text-xs px-2 py-0.5 rounded-full font-semibold">✔</span>
+                                        <Link to="/u/$username" params={{ username: user?.username || '' }}>
+                                            <span className="font-bold text-lg hover:underline">{user?.username}</span>
+                                        </Link>
+                                        {/* <span className="bg-[#9147ff] text-xs px-2 py-0.5 rounded-full font-semibold">✔</span> */}
                                     </div>
                                     <div className="font-semibold text-2xl text-white">
                                         {session?.title || 'No title available'}
@@ -220,37 +237,14 @@ function LiveDetailsPage() {
                 />
             </button>
 
-            <div className={`fixed right-0 top-16 h-[calc(100vh-4rem)] flex flex-col bg-[#232327] border-l border-[#2f2f35] transition-all duration-300 ${isSidebarExpanded ? 'w-[400px] min-w-[320px] max-w-[420px]' : 'w-0 overflow-hidden'}`}>
-                <div className="bg-[#18181b] px-4 py-2 border-b border-[#2f2f35] flex items-center text-sm font-semibold text-white/80">
-                    <MessageSquareText className="w-4 h-4 mr-2" /> Stream Chat
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    <ChatMessage user="ailurovt" text="ABOBA Mista Beasto" />
-                    <ChatMessage user="Triams_" text="oh a reaction channel to reactions, hell yeah" />
-                    <ChatMessage user="ecchigun_" text="soft canceled" />
-                    <ChatMessage user="ogipk" text="So its now right-wing to disagree with sexual harassment and alcohol abuse? Gotcha" />
-                    <ChatMessage user="AurangeJuice" text="It's almost like someone who is a controversy vulture probably isn't that honest of a person to begin with" />
-                    <ChatMessage user="Gaouchi" text="the Hasan link is BS and the only reason for this post.. the machine is pushing him rn" />
-                    <ChatMessage user="bootcute29" text={<span className="text-[#9147ff]">💜</span>} />
-                    <ChatMessage user="odin1997" text="criticism = ***** /right wing lol, people are so stupid" />
-                </div>
-                <div className="p-4 border-t border-[#2f2f35]">
-                    <div className="mb-2 text-xs text-gray-400">Please connect your wallet to chat</div>
-                    <div className="flex gap-2">
-                        <input className="flex-1 rounded bg-[#18181b] border border-[#2f2f35] px-3 py-2 text-sm text-white focus:outline-none" placeholder="Send a message" disabled />
-                        <button className="bg-[#9147ff] px-4 py-2 rounded text-white font-bold opacity-60 cursor-not-allowed">Chat</button>
-                    </div>
-                </div>
+            {/* Chat Sidebar */}
+            <div className={`fixed right-0 top-16 h-[calc(100vh-4rem)] transition-all duration-300 ${isSidebarExpanded ? 'w-[400px] min-w-[320px] max-w-[420px]' : 'w-0 overflow-hidden'}`}>
+                {streamKey && (
+                    <ChatSection 
+                        streamKey={streamKey}
+                    />
+                )}
             </div>
-        </div>
-    );
-}
-
-function ChatMessage({ user, text }: { user: string; text: React.ReactNode }) {
-    return (
-        <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold text-[#9147ff]">{user}</span>
-            <span>{text}</span>
         </div>
     );
 }

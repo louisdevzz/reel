@@ -27,6 +27,20 @@ function ProfilePage() {
     const [socialStats, setSocialStats] = useState<any>({});
     const [socialStatsLoading, setSocialStatsLoading] = useState(true);
 
+    // Update document title when user data is loaded
+    useEffect(() => {
+        if (user) {
+            document.title = `${user.username} - Reel`;
+        } else if (username) {
+            document.title = `${username} - Reel`;
+        }
+        
+        // Reset title when component unmounts
+        return () => {
+            document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+        };
+    }, [user, username]);
+
     useEffect(() => {
         const fetchUserData = async () => {
             setLoading(true);
