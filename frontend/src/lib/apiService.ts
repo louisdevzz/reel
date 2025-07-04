@@ -1212,6 +1212,19 @@ class ApiService {
       return { followers: 0, following: 0 }
     }
   }
+
+  // Chat APIs
+  async clearChatMessages(streamKey: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/chat/${streamKey}/messages`, {
+        method: 'DELETE',
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to clear chat messages:', error);
+      return false;
+    }
+  }
 }
 
 export const apiService = new ApiService(); 

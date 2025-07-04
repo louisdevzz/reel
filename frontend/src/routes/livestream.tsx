@@ -5,6 +5,7 @@ import { StreamPlayer } from '../components/StreamPlayer'
 import { apiService } from '../lib/apiService'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog'
 import { useUser } from '../lib/userContext'
+import { toast } from 'react-hot-toast'
 
 export const Route = createFileRoute('/livestream')({
   component: LivestreamPage,
@@ -24,6 +25,20 @@ function LivestreamPage() {
   const [streamDescription, setStreamDescription] = useState('')
   const [loadingLiveStream, setLoadingLiveStream] = useState(true)
   const [currentSession, setCurrentSession] = useState<any>(null)
+
+  // Update document title
+  useEffect(() => {
+    if (isLive) {
+      document.title = `Live Streaming - Reel`;
+    } else {
+      document.title = "Livestream Studio - Reel";
+    }
+    
+    // Reset title when component unmounts
+    return () => {
+      document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+    };
+  }, [isLive]);
 
   // Check backend connection on component mount
   useEffect(() => {
@@ -113,7 +128,7 @@ function LivestreamPage() {
     }
 
     console.log('🔌 Connecting WebSocket for stream key:', streamKey)
-    const ws = new WebSocket(`ws://localhost:3001/ws/stream-status?key=${streamKey}`);
+    const ws = new WebSocket(`ws://localhost:3002?type=status&key=${streamKey}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -220,14 +235,14 @@ function LivestreamPage() {
       // Get stream key data
       const streamKeyData = await apiService.getStreamKeyByKey(streamKey)
       if (!streamKeyData) {
-        alert('Stream key not found')
+        toast.error('Stream key not found')
         return
       }
 
       // Check if there's already a live session
       const existingSession = await apiService.getLiveSessionByStreamKey(streamKey)
       if (existingSession) {
-        alert('Stream is already live!')
+        toast.error('Stream is already live!')
         setCurrentSession(existingSession)
         setStreamTitle(existingSession.stream_sessions?.title || existingSession.title || '')
         setStreamDescription(existingSession.stream_sessions?.description || existingSession.description || '')
@@ -241,11 +256,11 @@ function LivestreamPage() {
         await apiService.startStream(session.id)
         setShowStartDialog(false)
         setCurrentSession(session)
-        alert('Stream prepared successfully! You can now start broadcasting from your streaming software.')
+        toast.success('Stream prepared successfully! You can now start broadcasting from your streaming software.')
       }
     } catch (error) {
       console.error('Failed to start stream:', error)
-      alert('Failed to start stream')
+      toast.error('Failed to start stream')
     }
   }
 
@@ -256,19 +271,31 @@ function LivestreamPage() {
     const sessionId = currentSession.stream_sessions?.id || currentSession.id
     if (!sessionId) {
       console.error('No session ID found in currentSession:', currentSession)
-      alert('Unable to stop stream: session ID not found')
+      toast.error('Unable to stop stream: session ID not found')
       return
     }
     
     try {
       await apiService.stopStream(sessionId)
+      
+      // Clear chat messages for this stream
+      if (streamKey) {
+        try {
+          await apiService.clearChatMessages(streamKey)
+          console.log('🗑️ Chat messages cleared for stream:', streamKey)
+        } catch (chatError) {
+          console.error('Failed to clear chat messages:', chatError)
+          // Don't fail the stream stop if chat clearing fails
+        }
+      }
+      
       setCurrentSession(null)
       setStreamTitle('')
       setStreamDescription('')
-      alert('Stream stopped successfully!')
+      toast.success('Stream stopped successfully!')
     } catch (error) {
       console.error('Failed to stop stream:', error)
-      alert('Failed to stop stream')
+      toast.error('Failed to stop stream')
     }
   }
 

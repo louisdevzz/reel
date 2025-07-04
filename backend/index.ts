@@ -9,13 +9,11 @@ import viewRoutes from "./src/routes/viewRoutes";
 import commentRoutes from "./src/routes/commentRoutes";
 import shareRoutes from "./src/routes/shareRoutes";
 import analyticsRoutes from "./src/routes/analyticsRoutes";
-import { streamSessionService } from "./src/services/streamSessionService";
+import chatRoutes from "./src/routes/chatRoutes";
 import { websocketService } from "./src/services/websocketService";
-import { streamKeyService } from "./src/services/streamKeyService";
 import { redisService } from "./src/services/redisService";
 import { workerService } from "./src/services/workerService";
 import path from 'path';
-// import chatRoutes from "./src/routes/chatRoutes"; // nếu có
 
 dotenv.config();
 
@@ -39,7 +37,7 @@ app.use('/api/views', viewRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/shares', shareRoutes);
 app.use('/api/analytics', analyticsRoutes);
-// app.use('/api/chat', chatRoutes); // nếu có
+app.use('/api/chat', chatRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -74,7 +72,11 @@ const server = app.listen(PORT, async () => {
   console.log(`HLS Server is running on http://localhost:8000/live/`);
   
   await initializeServices();
+  
+  // Initialize WebSocket service after server is ready
+  try {
+    websocketService.initialize(server);
+  } catch (error) {
+    console.error('Failed to initialize WebSocket service:', error);
+  }
 });
-
-// Initialize WebSocket service
-websocketService.initialize(server);

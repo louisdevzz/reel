@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { apiService } from '../lib/apiService'
 import { useUser } from '../lib/userContext'
 
@@ -22,7 +22,6 @@ const generateRandomFilename = (originalName: string): string => {
 }
 
 function UploadPage() {
-  const { currentUser, isConnected } = useUser()
   const [video, setVideo] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -30,6 +29,17 @@ function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
+  const { isConnected, currentUser } = useUser()
+
+  // Update document title
+  useEffect(() => {
+    document.title = "Upload Video - Reel";
+    
+    // Reset title when component unmounts
+    return () => {
+      document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

@@ -17,6 +17,7 @@
     "@rsbuild/plugin-node-polyfill": "^1.3.0",
     "@tanstack/react-router": "^1.20.0",
     "@tanstack/router-devtools": "^1.20.0",
+    "emoji-picker-react": "^4.12.3",
     "flv.js": "^1.6.2",
     "hls.js": "^1.6.5",
     "lucide-react": "^0.525.0",

@@ -172,3 +172,96 @@ export const streamKeyService = new StreamKeyService()
 
 // Export types for convenience
 export type { StreamKey, StreamSettings } 
+
+// Chat functionality
+export class ChatService {
+  private ws: WebSocket | null = null;
+  private streamKey: string | null = null;
+  private onMessageCallback: ((message: any) => void) | null = null;
+  private onConnectCallback: (() => void) | null = null;
+  private onDisconnectCallback: (() => void) | null = null;
+
+  connect(streamKey: string, userId?: string, username?: string, avatar?: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.close();
+    }
+
+    this.streamKey = streamKey;
+    const params = new URLSearchParams({
+      type: 'chat',
+      key: streamKey
+    });
+
+    if (userId) params.append('userId', userId);
+    if (username) params.append('username', username);
+    if (avatar) params.append('avatar', avatar);
+
+    this.ws = new WebSocket(`ws://localhost:3002?${params.toString()}`);
+
+    this.ws.onopen = () => {
+      console.log('✅ Chat WebSocket connected');
+      if (this.onConnectCallback) {
+        this.onConnectCallback();
+      }
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (this.onMessageCallback) {
+          this.onMessageCallback(data);
+        }
+      } catch (error) {
+        console.error('Error parsing chat message:', error);
+      }
+    };
+
+    this.ws.onclose = () => {
+      console.log('Chat WebSocket disconnected');
+      if (this.onDisconnectCallback) {
+        this.onDisconnectCallback();
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('Chat WebSocket error:', error);
+    };
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.streamKey = null;
+  }
+
+  sendMessage(message: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'chat_message',
+        message
+      }));
+    } else {
+      console.error('WebSocket is not connected');
+    }
+  }
+
+  onMessage(callback: (message: any) => void) {
+    this.onMessageCallback = callback;
+  }
+
+  onConnect(callback: () => void) {
+    this.onConnectCallback = callback;
+  }
+
+  onDisconnect(callback: () => void) {
+    this.onDisconnectCallback = callback;
+  }
+
+  isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+}
+
+export const chatService = new ChatService(); 

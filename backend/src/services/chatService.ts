@@ -1,78 +1,162 @@
+import { redisService } from './redisService';
 import { v4 as uuidv4 } from 'uuid';
-import type { ChatMessage } from '../types';
+
+export interface ChatMessage {
+  id: string;
+  streamKey: string;
+  username: string;
+  avatar?: string;
+  message: string;
+  timestamp: number;
+  userId?: string;
+}
+
+export interface ChatRoom {
+  streamKey: string;
+  participants: Set<string>;
+  lastActivity: number;
+}
 
 class ChatService {
-  private messages: Map<string, ChatMessage[]> = new Map();
+  private chatRooms: Map<string, ChatRoom> = new Map();
   private maxMessagesPerStream = 100;
+  private messageTTL = 3600; // 1 hour
 
-  addMessage(streamId: string, username: string, message: string): ChatMessage {
+  // Add a message to a stream's chat
+  async addMessage(streamKey: string, username: string, message: string, avatar?: string, userId?: string): Promise<ChatMessage> {
     const id = uuidv4();
     const chatMessage: ChatMessage = {
       id,
-      streamId,
+      streamKey,
       username,
+      avatar,
       message,
-      timestamp: new Date(),
+      timestamp: Date.now(),
+      userId
     };
 
-    if (!this.messages.has(streamId)) {
-      this.messages.set(streamId, []);
-    }
-
-    const streamMessages = this.messages.get(streamId)!;
-    streamMessages.push(chatMessage);
-
-    // Keep only the latest messages
-    if (streamMessages.length > this.maxMessagesPerStream) {
-      streamMessages.splice(0, streamMessages.length - this.maxMessagesPerStream);
-    }
+    // Store message in Redis
+    await this.storeMessageInRedis(streamKey, chatMessage);
 
     return chatMessage;
   }
 
-  getMessages(streamId: string, limit: number = 50): ChatMessage[] {
-    const streamMessages = this.messages.get(streamId) || [];
-    return streamMessages.slice(-limit);
-  }
-
-  getRecentMessages(streamId: string, since: Date): ChatMessage[] {
-    const streamMessages = this.messages.get(streamId) || [];
-    return streamMessages.filter(msg => msg.timestamp > since);
-  }
-
-  deleteMessage(streamId: string, messageId: string): boolean {
-    const streamMessages = this.messages.get(streamId);
-    if (!streamMessages) {
-      return false;
+  // Store message in Redis
+  private async storeMessageInRedis(streamKey: string, message: ChatMessage) {
+    try {
+      const messageData = JSON.stringify(message);
+      
+      // Add message to the list
+      await redisService.addChatMessage(streamKey, messageData);
+      
+      // Trim to keep only latest messages
+      await redisService.trimChatMessages(streamKey, 0, this.maxMessagesPerStream - 1);
+      
+      // Set TTL for the chat room
+      await redisService.setChatTTL(streamKey, this.messageTTL);
+      
+      // Update last activity
+      await this.updateChatRoomActivity(streamKey);
+    } catch (error) {
+      console.error('Error storing message in Redis:', error);
     }
+  }
 
-    const index = streamMessages.findIndex(msg => msg.id === messageId);
-    if (index === -1) {
-      return false;
+  // Get recent messages for a stream
+  async getMessages(streamKey: string, limit: number = 50): Promise<ChatMessage[]> {
+    try {
+      const messages = await redisService.getChatMessages(streamKey, 0, limit - 1);
+      
+      return messages
+        .map(msg => JSON.parse(msg))
+        .sort((a, b) => a.timestamp - b.timestamp);
+    } catch (error) {
+      console.error('Error getting messages from Redis:', error);
+      return [];
     }
-
-    streamMessages.splice(index, 1);
-    return true;
   }
 
-  clearStreamMessages(streamId: string): boolean {
-    return this.messages.delete(streamId);
-  }
-
-  getMessageCount(streamId: string): number {
-    const streamMessages = this.messages.get(streamId);
-    return streamMessages ? streamMessages.length : 0;
-  }
-
-  // Get messages for multiple streams
-  getMessagesForStreams(streamIds: string[], limit: number = 20): Record<string, ChatMessage[]> {
-    const result: Record<string, ChatMessage[]> = {};
+  // Join a chat room
+  async joinChatRoom(streamKey: string, userId: string) {
+    if (!this.chatRooms.has(streamKey)) {
+      this.chatRooms.set(streamKey, {
+        streamKey,
+        participants: new Set(),
+        lastActivity: Date.now()
+      });
+    }
     
-    streamIds.forEach(streamId => {
-      result[streamId] = this.getMessages(streamId, limit);
-    });
+    const room = this.chatRooms.get(streamKey)!;
+    room.participants.add(userId);
+    room.lastActivity = Date.now();
+  }
 
-    return result;
+  // Leave a chat room
+  async leaveChatRoom(streamKey: string, userId: string) {
+    const room = this.chatRooms.get(streamKey);
+    if (room) {
+      room.participants.delete(userId);
+      room.lastActivity = Date.now();
+      
+      // Remove room if no participants
+      if (room.participants.size === 0) {
+        this.chatRooms.delete(streamKey);
+      }
+    }
+  }
+
+  // Get participants in a chat room
+  getChatRoomParticipants(streamKey: string): string[] {
+    const room = this.chatRooms.get(streamKey);
+    return room ? Array.from(room.participants) : [];
+  }
+
+  // Update chat room activity
+  private async updateChatRoomActivity(streamKey: string) {
+    const room = this.chatRooms.get(streamKey);
+    if (room) {
+      room.lastActivity = Date.now();
+    }
+  }
+
+  // Clear messages for a stream
+  async clearStreamMessages(streamKey: string): Promise<boolean> {
+    try {
+      await redisService.deleteChatMessages(streamKey);
+      
+      // Remove chat room
+      this.chatRooms.delete(streamKey);
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing stream messages:', error);
+      return false;
+    }
+  }
+
+  // Get message count for a stream
+  async getMessageCount(streamKey: string): Promise<number> {
+    try {
+      return await redisService.getChatMessageCount(streamKey);
+    } catch (error) {
+      console.error('Error getting message count:', error);
+      return 0;
+    }
+  }
+
+  // Clean up old chat rooms
+  async cleanupOldChatRooms(maxAge: number = 24 * 60 * 60 * 1000) { // 24 hours
+    const now = Date.now();
+    for (const [streamKey, room] of this.chatRooms.entries()) {
+      if (now - room.lastActivity > maxAge) {
+        await this.clearStreamMessages(streamKey);
+      }
+    }
+  }
+
+  // Get active chat rooms
+  getActiveChatRooms(): string[] {
+    return Array.from(this.chatRooms.keys());
   }
 }
 
