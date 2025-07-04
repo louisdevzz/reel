@@ -200,7 +200,7 @@ function ShortVideoPage() {
   const preloadVideoElement = useCallback((videoId: string) => {
     if (!videoId || preloadedVideoElements[videoId]) return;
     const video = document.createElement('video');
-    video.src = `http://localhost:3001/api/videos/proxy/${videoId}`;
+    video.src = `${process.env.PUBLIC_API_URL}/api/videos/proxy/${videoId}`;
     video.preload = 'auto';
     video.muted = true;
     video.style.display = 'none';
@@ -227,7 +227,7 @@ function ShortVideoPage() {
       videoRef.current.src = preloaded.src;
     } else {
       // Fallback to normal src
-      videoRef.current.src = `http://localhost:3001/api/videos/proxy/${currentId}`;
+      videoRef.current.src = `${process.env.PUBLIC_API_URL}/api/videos/proxy/${currentId}`;
     }
     // Reset play/pause overlay state when video changes
     setHasInteracted(false);
@@ -684,7 +684,7 @@ function ShortVideoPage() {
               autoPlay={true}
               preload="auto"
             >
-              <source src={`http://localhost:3001/api/videos/proxy/${currentVideo.id}`} type="video/mp4" />
+              <source src={`${process.env.PUBLIC_API_URL}/api/videos/proxy/${currentVideo.id}`} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
 

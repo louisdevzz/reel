@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   source: {
     define:{
+      "process.env.PUBLIC_API_URL": JSON.stringify(process.env.PUBLIC_API_URL),
       "process.env.PUBLIC_YOUTUBE_API_KEY": JSON.stringify(process.env.PUBLIC_YOUTUBE_API_KEY),
       "process.env.PUBLIC_TWITTER_BEARER_TOKEN": JSON.stringify(process.env.PUBLIC_TWITTER_BEARER_TOKEN),
       "process.env.PUBLIC_TIKTOK_RAPID_API_KEY": JSON.stringify(process.env.PUBLIC_TIKTOK_RAPID_API_KEY),
@@ -26,7 +27,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3001"
+        target: "https://f199-2405-4802-c0fa-c940-f626-79ff-fedc-4bf.ngrok-free.app"
       },
     },
   },
