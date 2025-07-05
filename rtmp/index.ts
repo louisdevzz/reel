@@ -49,66 +49,24 @@ const config = {
   };
 
 // Khởi tạo Node Media Server
-const nms = new NodeMediaServer(config);
+const nms = new NodeMediaServer(config)
 
-// Event handlers cho Node Media Server
-nms.on('preConnect', (id: any, args: any) => {
-  console.log('[NodeEvent on preConnect]', `id=${id} args=${JSON.stringify(args)}`);
+// Handle stream start (postPublish)
+nms.on('postPublish', async (stream: any) => {
+  
+  // Extract stream key from stream name
+  const streamKey = stream.streamName;
+  console.log(`[NodeMediaServer] Processing stream start for key: ${streamKey}`);
 });
 
-nms.on('postConnect', (id: any, args: any) => {
-  console.log('[NodeEvent on postConnect]', `id=${id} args=${JSON.stringify(args)}`);
+// Handle stream end (donePublish)
+nms.on('donePublish', async (stream: any) => {
+  // Extract stream key from stream name
+  const streamKey = stream.streamName;
+  console.log(`[NodeMediaServer] Processing stream end for key: ${streamKey}`);
 });
 
-nms.on('doneConnect', (id: any, args: any) => {
-  console.log('[NodeEvent on doneConnect]', `id=${id} args=${JSON.stringify(args)}`);
-});
+nms.run();
 
-nms.on('prePublish', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on prePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-nms.on('postPublish', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on postPublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-nms.on('donePublish', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on donePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-nms.on('prePlay', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on prePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-nms.on('postPlay', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on postPlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-nms.on('donePlay', (id: any, StreamPath: any, args: any) => {
-  console.log('[NodeEvent on donePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-});
-
-// Khởi động server
-const startServer = () => {
-  try {
-    // Khởi động Node Media Server
-    nms.run();
-    console.log('🚀 Node Media Server đã khởi động:');
-    console.log(`   RTMP Server: rtmp://localhost:${config.rtmp.port}`);
-    console.log(`   HTTP Server: http://localhost:${config.http.port}`);
-  } catch (error) {
-    console.error('❌ Lỗi khởi động server:', error);
-    process.exit(1);
-  }
-};
-
-// Xử lý tín hiệu tắt
-process.on('SIGINT', () => {
-  console.log('\n🛑 Đang tắt server...');
-  nms.stop();
-  console.log('✅ Server đã tắt thành công');
-  process.exit(0);
-});
-
-// Khởi động server
-startServer();
+console.log(`🚀 RTMP Server is running on rtmp://localhost:${config.rtmp.port}/live/`);
+console.log(`🌐 HLS Server is running on http://localhost:${config.http.port}/live/`);
