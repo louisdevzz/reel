@@ -56,7 +56,7 @@ export function StreamPlayer({ streamKey }: StreamPlayerProps) {
         } else {
           // Fallback to HLS
           const video = videoRef.current;
-          video.src = `http://localhost:3001/live/${streamKey}.m3u8`;
+          video.src = `${process.env.PUBLIC_API_URL}/live/${streamKey}.m3u8`;
           
           const handleCanPlay = () => {
             setIsLoading(false);

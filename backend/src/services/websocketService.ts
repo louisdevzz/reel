@@ -1,9 +1,8 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 import * as http from 'http';
 import { streamSessionService } from './streamSessionService';
 import { streamKeyService } from './streamKeyService';
 import { chatService } from './chatService';
-import { userService } from './userService';
 
 interface StreamStatusClient {
   ws: WebSocket;
