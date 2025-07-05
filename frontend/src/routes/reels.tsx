@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
 
-export const Route = createFileRoute('/videos')({
-  component: VideosPage,
+export const Route = createFileRoute('/reels')({
+  component: ReelsPage,
 })
 
-function VideosPage() {
+function ReelsPage() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)

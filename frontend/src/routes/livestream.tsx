@@ -127,7 +127,7 @@ function LivestreamPage() {
     }
 
     console.log('🔌 Connecting WebSocket for stream key:', streamKey)
-    const ws = new WebSocket(`ws://localhost:3002?type=status&key=${streamKey}`);
+    const ws = new WebSocket(`${process.env.PUBLIC_WS_URL}?type=status&key=${streamKey}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

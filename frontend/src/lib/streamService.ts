@@ -196,7 +196,7 @@ export class ChatService {
     if (username) params.append('username', username);
     if (avatar) params.append('avatar', avatar);
 
-    this.ws = new WebSocket(`ws://localhost:3002?${params.toString()}`);
+    this.ws = new WebSocket(`${process.env.PUBLIC_WS_URL}?${params.toString()}`);
 
     this.ws.onopen = () => {
       console.log('✅ Chat WebSocket connected');
