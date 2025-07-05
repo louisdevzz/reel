@@ -41,7 +41,7 @@ const config = {
     secret: 'nodemedia2017secretstring',
   },
   trans: {
-    ffmpeg: '/opt/homebrew/bin/ffmpeg',
+    ffmpeg: process.env.FFMPEG_PATH || '/usr/bin/ffmpeg',
     tasks: [
       {
         app: 'live',
