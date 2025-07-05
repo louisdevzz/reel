@@ -4,12 +4,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run index.ts",
+    "start": "chmod +x install-ffmpeg.sh && ./install-ffmpeg.sh && chmod +x start-server.sh && ./start-server.sh",
     "dev": "bun --watch index.ts",
     "install-ffmpeg": "chmod +x install-ffmpeg.sh && ./install-ffmpeg.sh"
   },
   "dependencies": {
-    "node-media-server": "^2.6.2"
+    "node-media-server": "^4.0.18"
   },
   "devDependencies": {
     "@types/bun": "latest",
