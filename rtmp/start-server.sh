@@ -5,24 +5,7 @@
 
 echo "🚀 Khởi động Node Media Server..."
 
-# Kiểm tra xem FFmpeg đã được cài đặt chưa
-if ! command -v ffmpeg &> /dev/null; then
-    echo "❌ FFmpeg chưa được cài đặt!"
-    echo "💡 Chạy lệnh sau để cài đặt FFmpeg:"
-    echo "   sudo ./install-ffmpeg.sh"
-    exit 1
-fi
-
-echo "✅ FFmpeg đã được cài đặt: $(ffmpeg -version | head -n1)"
-
-# Kiểm tra xem Bun đã được cài đặt chưa
-if ! command -v bun &> /dev/null; then
-    echo "❌ Bun chưa được cài đặt!"
-    echo "💡 Cài đặt Bun bằng lệnh:"
-    echo "   curl -fsSL https://bun.sh/install | bash"
-    exit 1
-fi
-
+curl -fsSL https://bun.sh/install | bash
 echo "✅ Bun đã được cài đặt: $(bun --version)"
 
 # Cài đặt dependencies
