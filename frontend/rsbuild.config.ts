@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   source: {
     define:{
+      "process.env.PUBLIC_GOOGLE_CLIENT_ID": JSON.stringify(process.env.PUBLIC_GOOGLE_CLIENT_ID),
       "process.env.PUBLIC_API_URL": JSON.stringify(process.env.PUBLIC_API_URL),
       "process.env.PUBLIC_WS_URL": JSON.stringify(process.env.PUBLIC_WS_URL),
       "process.env.PUBLIC_YOUTUBE_API_KEY": JSON.stringify(process.env.PUBLIC_YOUTUBE_API_KEY),

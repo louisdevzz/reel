@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiService, User } from '../lib/apiService'
 import { Triangle } from 'lucide-react'
 import flvjs from 'flv.js';
+import { useUser } from '../lib/userContext'
+import { UserRegistrationDialog } from '../components/UserRegistrationDialog'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -34,6 +36,18 @@ function HomePage() {
   const [showAllLive, setShowAllLive] = useState(false)
   const [showAllShorts, setShowAllShorts] = useState(false)
   const [showAllVideos, setShowAllVideos] = useState(false)
+
+  // User registration dialog logic
+  const { currentUser, account, isConnected, setCurrentUser } = useUser()
+  const [showDialog, setShowDialog] = useState(false)
+
+  useEffect(() => {
+    if (isConnected && !currentUser) {
+      setShowDialog(true)
+    } else {
+      setShowDialog(false)
+    }
+  }, [isConnected, currentUser])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -338,81 +352,92 @@ function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-white pb-20">
-      <div className="flex flex-col flex-1 h-[calc(100vh-4rem)] overflow-y-auto pb-10">
-        {/* Live Streams Section */}
-        {liveStreams.length > 0 && (
-          <section className="px-4 pt-6">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6 text-red-400">Live channels we think you’ll like</h2>
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {(showAllLive ? liveStreams : liveStreams.slice(0, 3)).map((stream: any) => (
-                  <LiveStreamCard key={stream.id} stream={stream} />
-                ))}
-              </div>
-              {liveStreams.length > 3 && (
-                <div className="text-center mt-4">
-                  <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllLive(v => !v)}>
-                    {showAllLive ? 'Show less' : `Show more (${liveStreams.length - 3})`}
-                  </button>
+    <>
+      <UserRegistrationDialog
+        isOpen={showDialog}
+        onClose={() => setShowDialog(false)}
+        onRegistrationComplete={(user) => {
+          setCurrentUser(user)
+          setShowDialog(false)
+        }}
+        aptosAddress={account || ''}
+      />
+      <div className="min-h-screen bg-[#18181b] text-white pb-20">
+        <div className="flex flex-col flex-1 h-[calc(100vh-4rem)] overflow-y-auto pb-10">
+          {/* Live Streams Section */}
+          {liveStreams.length > 0 && (
+            <section className="px-4 pt-6">
+              <div className="max-w-7xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6 text-red-400">Live channels we think you’ll like</h2>
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {(showAllLive ? liveStreams : liveStreams.slice(0, 3)).map((stream: any) => (
+                    <LiveStreamCard key={stream.id} stream={stream} />
+                  ))}
                 </div>
-              )}
-            </div>
-          </section>
-        )}
-        {/* Shorts Section */}
-        {shorts.length > 0 && (
-          <section className="px-4 pt-4">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6 text-white">Latest Shorts</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {(showAllShorts ? shorts : shorts.slice(0, 6)).map((short) => (
-                  <VideoCard key={short.id} video={short} isShort={true} />
-                ))}
+                {liveStreams.length > 3 && (
+                  <div className="text-center mt-4">
+                    <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllLive(v => !v)}>
+                      {showAllLive ? 'Show less' : `Show more (${liveStreams.length - 3})`}
+                    </button>
+                  </div>
+                )}
               </div>
-              {shorts.length > 6 && (
-                <div className="text-center mt-6">
-                  <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllShorts(v => !v)}>
-                    {showAllShorts ? 'Show less' : `View more shorts (${shorts.length - 6})`}
-                  </button>
+            </section>
+          )}
+          {/* Shorts Section */}
+          {shorts.length > 0 && (
+            <section className="px-4 pt-4">
+              <div className="max-w-7xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6 text-white">Latest Shorts</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {(showAllShorts ? shorts : shorts.slice(0, 6)).map((short) => (
+                    <VideoCard key={short.id} video={short} isShort={true} />
+                  ))}
                 </div>
-              )}
-            </div>
-          </section>
-        )}
-        {/* Videos Section */}
-        {videos.length > 0 && (
-          <section className="px-4 pt-12">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6 text-purple-300">Latest Videos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {(showAllVideos ? videos : videos.slice(0, 8)).map((video) => (
-                  <VideoCard key={video.id} video={video} />
-                ))}
+                {shorts.length > 6 && (
+                  <div className="text-center mt-6">
+                    <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllShorts(v => !v)}>
+                      {showAllShorts ? 'Show less' : `View more shorts (${shorts.length - 6})`}
+                    </button>
+                  </div>
+                )}
               </div>
-              {videos.length > 8 && (
-                <div className="text-center mt-6">
-                  <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllVideos(v => !v)}>
-                    {showAllVideos ? 'Show less' : `View more videos (${videos.length - 8})`}
-                  </button>
+            </section>
+          )}
+          {/* Videos Section */}
+          {videos.length > 0 && (
+            <section className="px-4 pt-12">
+              <div className="max-w-7xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6 text-purple-300">Latest Videos</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {(showAllVideos ? videos : videos.slice(0, 8)).map((video) => (
+                    <VideoCard key={video.id} video={video} />
+                  ))}
                 </div>
-              )}
-            </div>
-          </section>
-        )}
-        {/* Empty State */}
-        {videos.length === 0 && shorts.length === 0 && (
-          <section className="px-4 pt-12">
-            <div className="max-w-7xl mx-auto text-center">
-              <h2 className="text-2xl font-bold mb-4 text-purple-300">No videos yet</h2>
-              <p className="text-gray-400 mb-6">Be the first to upload a video to the platform!</p>
-              <button className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold">
-                Upload Video
-              </button>
-            </div>
-          </section>
-        )}
+                {videos.length > 8 && (
+                  <div className="text-center mt-6">
+                    <button className="text-purple-400 hover:text-purple-300" onClick={() => setShowAllVideos(v => !v)}>
+                      {showAllVideos ? 'Show less' : `View more videos (${videos.length - 8})`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+          {/* Empty State */}
+          {videos.length === 0 && shorts.length === 0 && (
+            <section className="px-4 pt-12">
+              <div className="max-w-7xl mx-auto text-center">
+                <h2 className="text-2xl font-bold mb-4 text-purple-300">No videos yet</h2>
+                <p className="text-gray-400 mb-6">Be the first to upload a video to the platform!</p>
+                <button className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold">
+                  Upload Video
+                </button>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 } 
