@@ -5,6 +5,7 @@ import { StreamPlayer } from "../../components/StreamPlayer";
 import { ChatSection } from "../../components/ChatSection";
 import { streamKeyService } from "../../lib/streamService";
 import { apiService, User } from "../../lib/apiService";
+import { useUser } from "../../lib/userContext";
 import type { StreamKey } from "../../lib/apiService";
 
 export const Route = createFileRoute('/live/$username')({
@@ -18,7 +19,10 @@ function LiveDetailsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<any | null>(null);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isCheckingFollow, setIsCheckingFollow] = useState(false);
     const { username } = Route.useParams();
+    const { currentUser } = useUser();
 
     // Update document title when user data is loaded
     useEffect(() => {
@@ -33,6 +37,52 @@ function LiveDetailsPage() {
             document.title = "Reel – A Decentralized SocialFi Platform for Video and Livestreaming";
         };
     }, [user, username]);
+
+    // Check if current user is following the streamer
+    useEffect(() => {
+        const checkFollowStatus = async () => {
+            if (!currentUser || !user) {
+                setIsFollowing(false);
+                return;
+            }
+
+            // Don't check if user is trying to follow themselves
+            if (currentUser.id === user.id) {
+                setIsFollowing(false);
+                return;
+            }
+
+            setIsCheckingFollow(true);
+            try {
+                const following = await apiService.isFollowing(currentUser.id, user.id);
+                setIsFollowing(following);
+            } catch (error) {
+                console.error('Error checking follow status:', error);
+                setIsFollowing(false);
+            } finally {
+                setIsCheckingFollow(false);
+            }
+        };
+
+        checkFollowStatus();
+    }, [currentUser, user]);
+
+    // Handle follow/unfollow action
+    const handleFollowAction = async () => {
+        if (!currentUser || !user || currentUser.id === user.id) return;
+
+        try {
+            if (isFollowing) {
+                await apiService.unfollowUser(currentUser.id, user.id);
+                setIsFollowing(false);
+            } else {
+                await apiService.followUser(currentUser.id, user.id);
+                setIsFollowing(true);
+            }
+        } catch (error) {
+            console.error('Error handling follow action:', error);
+        }
+    };
 
     useEffect(() => {
         const fetchStreamKey = async () => {
@@ -165,15 +215,23 @@ function LiveDetailsPage() {
                                     </div>
                                 </div>
                             </div>
-                                                    <div className="flex gap-2 flex-wrap items-center">
-                            <button className="bg-[#9147ff] hover:bg-[#772ce8] px-5 py-2 rounded-full font-bold text-white text-sm">Follow</button>
-                            <button className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]">Gift a Sub</button>
-                            <button className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]">Follow</button>
-                            <div className="flex items-center gap-1 ml-4 text-red-400 font-semibold">
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5Z"/></svg>
-                                {session?.viewerCount || 0} viewers
+                            <div className="flex gap-2 flex-wrap items-center">
+                                {/* Only show follow button if current user is not following and not viewing their own stream */}
+                                {currentUser && currentUser.id !== user?.id && (
+                                    <button 
+                                        onClick={handleFollowAction}
+                                        disabled={isCheckingFollow}
+                                        className={`px-5 py-2 rounded-full font-bold text-white text-sm transition-colors ${
+                                            isFollowing 
+                                                ? 'bg-[#232327] hover:bg-[#18181b] border border-[#2f2f35]' 
+                                                : 'bg-[#9147ff] hover:bg-[#772ce8]'
+                                        } ${isCheckingFollow ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        {isCheckingFollow ? '...' : (isFollowing ? 'Following' : 'Follow')}
+                                    </button>
+                                )}
+                                <button className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]">Tip Now</button>
                             </div>
-                        </div>
                         </div>
                         <div className="font-semibold text-lg text-white">
                             {session?.description || 'No description available'}

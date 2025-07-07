@@ -2,7 +2,10 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService, User } from '../lib/apiService'
 import { Triangle } from 'lucide-react'
-import flvjs from 'flv.js';
+import * as Player from '@livepeer/react/player';
+import { cn } from '../lib/utils';
+import { Src } from '@livepeer/react';
+import { LoadingIcon } from '@livepeer/react/assets';
 import { useUser } from '../lib/userContext'
 import { UserRegistrationDialog } from '../components/UserRegistrationDialog'
 
@@ -77,49 +80,97 @@ function HomePage() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  const getLivePreviewUrl = (streamKey: string) =>
-    `http://localhost:8000/live/${streamKey}.flv`;
+
 
   const LiveStreamCard = ({ stream }: { stream: any }) => {
     const streamSession = stream.stream_sessions;
     const streamKey = stream.stream_keys?.key || stream.streamKey?.key || stream.streamKey || stream.key;
     const user = stream.users;
-    const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [snapshotTaken, setSnapshotTaken] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [src, setSrc] = useState<Src[] | null>(null);
 
+    // Get playback URL from API
     useEffect(() => {
-      if (!streamKey || !videoRef.current || !canvasRef.current) return;
-      let flvPlayer: flvjs.Player | null = null;
+      const getPlaybackUrl = async () => {
+        if (!streamKey) return;
 
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+        setIsLoading(true);
+        setError(null);
 
-      if (flvjs.isSupported()) {
-        flvPlayer = flvjs.createPlayer({
-          type: 'flv',
-          url: getLivePreviewUrl(streamKey),
-          isLive: true,
-        });
+        try {
+          // Try to get playback URL from stream key
+          const streamKeyData = await apiService.getStreamKeyByKey(streamKey);
+          if (streamKeyData?.playbackUrl) {
+            setSrc([{ 
+              type: 'hls', 
+              src: streamKeyData.playbackUrl as `${string}m3u8`,
+              mime: 'application/vnd.apple.mpegurl',
+              width: 1920,
+              height: 1080
+            }]);
+            return;
+          }
 
-        flvPlayer.attachMediaElement(video);
-        flvPlayer.load();
+          // If no playback URL in stream key, try to get from stream ID
+          if (streamKeyData?.livepeerStreamId) {
+            const streamInfo = await apiService.getLivepeerStreamInfo(streamKeyData.livepeerStreamId);
+            if (streamInfo?.playbackUrl) {
+              setSrc([{ 
+                type: 'hls', 
+                src: streamInfo.playbackUrl as `${string}m3u8`,
+                mime: 'application/vnd.apple.mpegurl',
+                width: 1920,
+                height: 1080
+              }]);
+              return;
+            }
+          }
 
-        flvPlayer.on(flvjs.Events.METADATA_ARRIVED, () => {
-          setTimeout(() => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-            setSnapshotTaken(true);
-            flvPlayer?.destroy();
-          }, 1000); // Đợi 1s cho video có frame
-        });
-      }
+          // If still no playback URL, try to get from playback ID
+          if (streamKeyData?.playbackId) {
+            const streamInfo = await apiService.getLivepeerStreamInfoByPlaybackId(streamKeyData.playbackId);
+            if (streamInfo?.playbackUrl) {
+              setSrc([{ 
+                type: 'hls', 
+                src: streamInfo.playbackUrl as `${string}m3u8`,
+                mime: 'application/vnd.apple.mpegurl',
+                width: 1920,
+                height: 1080
+              }]);
+              return;
+            }
+          }
+
+          setError('No playback URL available');
+        } catch (err) {
+          console.error('Error getting playback URL:', err);
+          setError('Failed to get playback URL');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      getPlaybackUrl();
+    }, [streamKey]);
+
+    // Capture first frame when video is ready
+    useEffect(() => {
+      if (!src || !canvasRef.current) return;
+
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (!snapshotTaken) {
+          setError('Video loading timeout');
+        }
+      }, 10000); // 10 seconds timeout
 
       return () => {
-        if (flvPlayer) flvPlayer.destroy();
+        clearTimeout(timeoutId);
       };
-    }, [streamKey]);
+    }, [src, snapshotTaken]);
 
     return (
       <Link
@@ -129,30 +180,71 @@ function HomePage() {
         className="min-w-[340px] max-w-[340px] bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer relative"
       >
         <div className="relative">
-          {streamKey ? (
+          {src && !error ? (
             <>
               {!snapshotTaken && (
-                <video
-                  ref={videoRef}
-                  className="w-full h-48 object-cover bg-black"
-                  muted
-                  playsInline
-                  preload="metadata"
-                  style={{ display: 'block' }}
-                />
+                <div className="w-full h-48 bg-black">
+                  <Player.Root 
+                    src={src}
+                    autoPlay
+                  >
+                    <Player.Container className="h-full w-full overflow-hidden bg-black outline-none transition rounded">
+                      <Player.Video
+                         title="Live stream"
+                         className={cn("h-full w-full transition")}
+                         muted
+                         onLoadedData={(e) => {
+                          const video = e.currentTarget;
+                          if (video.videoWidth > 0 && video.videoHeight > 0 && canvasRef.current) {
+                            const canvas = canvasRef.current;
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                              setSnapshotTaken(true);
+                              // Pause the video after capturing the frame
+                              video.pause();
+                            }
+                          }
+                        }}
+                      />
+                      <Player.LoadingIndicator className="w-full relative h-full bg-black/50 backdrop-blur data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                          <LoadingIcon className="w-8 h-8 animate-spin" />
+                        </div>
+                      </Player.LoadingIndicator>
+                      <Player.ErrorIndicator
+                        matcher="all"
+                        className="absolute select-none inset-0 text-center bg-black/40 backdrop-blur-lg flex flex-col items-center justify-center gap-4 duration-1000 data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0"
+                      >
+                        <div className="flex flex-col gap-5">
+                          <div className="flex flex-col gap-1">
+                            <div className="text-lg sm:text-2xl font-bold">Stream Error</div>
+                            <div className="text-xs sm:text-sm text-gray-100">
+                              Unable to load the stream
+                            </div>
+                          </div>
+                        </div>
+                      </Player.ErrorIndicator>
+                    </Player.Container>
+                  </Player.Root>
+                </div>
               )}
               <canvas
                 ref={canvasRef}
                 className="w-full h-48 object-cover bg-black"
                 style={{ display: snapshotTaken ? 'block' : 'none' }}
               />
+              {isLoading && !snapshotTaken && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 animate-pulse"></div>
+                </div>
+              )}
             </>
           ) : (
-            <div className="w-full h-48 bg-gradient-to-br from-purple-900/20 to-blue-900/20 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-2">📺</div>
-                <div className="text-sm text-gray-400">Live Stream</div>
-              </div>
+            <div className="w-full h-48 bg-[#27272a] animate-pulse">
+              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800"></div>
             </div>
           )}
           <span className="absolute top-2 left-2 bg-red-600 text-xs font-bold px-2 py-1 rounded text-white z-10">LIVE</span>
