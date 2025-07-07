@@ -1328,6 +1328,12 @@ class ApiService {
       return false;
     }
   }
+
+  // Add this method to fetch user by account (aptosAddress)
+  async getUserByAccount(account: string): Promise<User | null> {
+    // For now, treat account as aptosAddress
+    return this.getUserByAptosAddress(account);
+  }
 }
 
 export const apiService = new ApiService(); 
