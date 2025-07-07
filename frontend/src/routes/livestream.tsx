@@ -6,6 +6,7 @@ import { apiService } from '../lib/apiService'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog'
 import { useUser } from '../lib/userContext'
 import { toast } from 'react-hot-toast'
+import { streamStatusService } from '../lib/streamService'
 
 export const Route = createFileRoute('/livestream')({
   component: LivestreamPage,
@@ -14,6 +15,7 @@ export const Route = createFileRoute('/livestream')({
 function LivestreamPage() {
   const { currentUser, isConnected: userConnected } = useUser()
   const [streamKey, setStreamKey] = useState<string | null>(null)
+  const [streamKeyData, setStreamKeyData] = useState<any>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(true)
@@ -25,6 +27,7 @@ function LivestreamPage() {
   const [streamDescription, setStreamDescription] = useState('')
   const [loadingLiveStream, setLoadingLiveStream] = useState(true)
   const [currentSession, setCurrentSession] = useState<any>(null)
+  const [livepeerStatus, setLivepeerStatus] = useState<{ isActive: boolean; isLive: boolean } | null>(null)
 
   // Update document title
   useEffect(() => {
@@ -58,7 +61,7 @@ function LivestreamPage() {
     checkConnection()
   }, [])
 
-  // Auto-load current user's stream key
+  // Auto-load current user's stream key và kiểm tra Livepeer status
   useEffect(() => {
     if (!isConnected || !userConnected || !currentUser) {
       setLoadingLiveStream(false)
@@ -68,120 +71,58 @@ function LivestreamPage() {
     const loadUserStreamKey = async () => {
       setLoadingLiveStream(true)
       try {
-        // Get current user's stream key
+        // Get current user's stream key (only if exists)
         const userStreamKey = await apiService.getStreamKeyByUserId(currentUser.id)
-        
         if (userStreamKey) {
           setStreamKey(userStreamKey.key)
-          setIsLive(!!userStreamKey.isLive)
-          
-          // If stream is live, get current session info
-          if (userStreamKey.isLive) {
-            try {
-              const session = await apiService.getLiveSessionByStreamKey(userStreamKey.key)
-              if (session) {
-                setCurrentSession(session)
-                setStreamTitle(session.stream_sessions?.title || session.title || '')
-                setStreamDescription(session.stream_sessions?.description || session.description || '')
-              } else {
-                setCurrentSession(null)
-                setStreamTitle('')
-                setStreamDescription('')
-              }
-            } catch (error) {
-              console.error('Error loading session info:', error)
-              setCurrentSession(null)
-              setStreamTitle('')
-              setStreamDescription('')
-            }
-          }
+          setStreamKeyData(userStreamKey)
+          // Không checkLivepeerStreamStatus ở đây nữa
         } else {
-          console.log('📺 No stream key found for user')
           setStreamKey(null)
+          setStreamKeyData(null)
           setIsLive(false)
           setCurrentSession(null)
         }
       } catch (error) {
-        console.error('Error loading user stream key:', error)
         setStreamKey(null)
+        setStreamKeyData(null)
         setIsLive(false)
         setCurrentSession(null)
       } finally {
         setLoadingLiveStream(false)
       }
     }
-
     loadUserStreamKey()
   }, [isConnected, userConnected, currentUser])
 
-  // WebSocket connection for real-time stream status
+  // Sử dụng WebSocket để check live status
   useEffect(() => {
     if (!streamKey) {
       setIsLive(false)
-      setCurrentSession(null)
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      return;
+      setLivepeerStatus(null)
+      streamStatusService.disconnect()
+      return
     }
-
-    console.log('🔌 Connecting WebSocket for stream key:', streamKey)
-    const ws = new WebSocket(`${process.env.PUBLIC_WS_URL}?type=status&key=${streamKey}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('✅ WebSocket connected for stream status')
-    }
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        const wasLive = isLive
-        setIsLive(!!data.isLive);
-        
-                  // If stream went live, get session info
-          if (!wasLive && data.isLive) {
-            loadSessionInfo()
-          }
-          
-          // If stream went offline, clear the stream key and session
-          if (wasLive && !data.isLive) {
-            setStreamKey(null)
-            setCurrentSession(null)
-            setStreamTitle('')
-            setStreamDescription('')
-          }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error)
-        setIsLive(false);
-        setStreamKey(null)
+    // Kết nối WebSocket
+    streamStatusService.connect(streamKey)
+    // Lắng nghe status
+    streamStatusService.onStatus((status) => {
+      setIsLive(!!status.isLive)
+      setLivepeerStatus((prev) => ({ ...(prev || {}), isLive: !!status.isLive, isActive: true }))
+      if (status.isLive) {
+        loadSessionInfo()
+      } else {
         setCurrentSession(null)
       }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      setIsLive(false);
-      setStreamKey(null)
-      setCurrentSession(null)
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket closed')
-      setIsLive(false);
-      setStreamKey(null)
-      setCurrentSession(null)
-    };
-
+    })
+    // Ngắt kết nối khi unmount/đổi streamKey
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-      wsRef.current = null;
-    };
-  }, [streamKey, wsVersion]);
+      streamStatusService.disconnect()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamKey])
+
+  // Xóa poll checkLivepeerStreamStatus (bỏ useEffect poll 5s)
 
   const loadSessionInfo = async () => {
     if (!streamKey) return
@@ -227,16 +168,9 @@ function LivestreamPage() {
   }
 
   const handleStartStream = async () => {
-    if (!streamKey) return
+    if (!streamKey || !streamKeyData) return
     
     try {
-      // Get stream key data
-      const streamKeyData = await apiService.getStreamKeyByKey(streamKey)
-      if (!streamKeyData) {
-        toast.error('Stream key not found')
-        return
-      }
-
       // Check if there's already a live session
       const existingSession = await apiService.getLiveSessionByStreamKey(streamKey)
       if (existingSession) {
@@ -297,8 +231,6 @@ function LivestreamPage() {
     }
   }
 
-
-
   return (
     <div className="min-h-screen bg-[#18181b] text-white flex flex-col">
       {/* Connection Status */}
@@ -357,14 +289,19 @@ function LivestreamPage() {
                   🔴 LIVE
                 </span>
               )}
-              {!loadingLiveStream && !isLive && (
+              {!loadingLiveStream && !isLive && livepeerStatus?.isActive && (
+                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
+                  ⚡ READY
+                </span>
+              )}
+              {!loadingLiveStream && !isLive && !livepeerStatus?.isActive && (
                 <span className="text-xs bg-gray-500/20 text-gray-400 px-2 py-1 rounded">
                   ⚫ OFFLINE
                 </span>
               )}
             </div>
             <div className="flex gap-2">
-              {streamKey && !isLive && (
+              {streamKey && !isLive && livepeerStatus?.isActive && (
                 <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
                   <DialogTrigger asChild>
                     <button className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-medium transition-colors">
@@ -448,13 +385,34 @@ function LivestreamPage() {
                     )}
                   </div>
                 )}
-                <StreamPlayer streamKey={streamKey} />
+                <StreamPlayer 
+                  streamKey={streamKey} 
+                  playbackUrl={streamKeyData?.playbackUrl}
+                  streamId={streamKeyData?.livepeerStreamId}
+                  playbackId={streamKeyData?.livepeerStreamId} // Use livepeerStreamId as playbackId
+                />
+              </div>
+            ) : !streamKey ? (
+              <div className="text-center">
+                <div className="text-6xl mb-4">🔑</div>
+                <h3 className="text-xl font-semibold mb-2">Create Stream Key</h3>
+                <p className="text-gray-400 mb-4">
+                  You need to create a stream key to start broadcasting. Use the Stream Management panel on the left to create your first stream key.
+                </p>
+                <p className="text-sm text-gray-500">Once you have a stream key, you can start broadcasting from your streaming software (OBS, Streamlabs, etc.)</p>
               </div>
             ) : (
               <div className="text-center">
                 <div className="text-6xl mb-4">📺</div>
-                <h3 className="text-xl font-semibold mb-2">No Live Stream</h3>
-                <p className="text-gray-400 mb-4">Your stream key is ready. Click "Prepare Stream" to set up your broadcast</p>
+                <h3 className="text-xl font-semibold mb-2">
+                  {livepeerStatus?.isActive ? 'Stream Ready' : 'No Live Stream'}
+                </h3>
+                <p className="text-gray-400 mb-4">
+                  {livepeerStatus?.isActive 
+                    ? 'Your stream key is ready. Click "Prepare Stream" to set up your broadcast'
+                    : 'Your stream key is ready. Start broadcasting from your streaming software (OBS, Streamlabs, etc.)'
+                  }
+                </p>
                 <p className="text-sm text-gray-500">Then start broadcasting from your streaming software (OBS, Streamlabs, etc.)</p>
               </div>
             )}

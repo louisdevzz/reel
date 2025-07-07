@@ -61,3 +61,16 @@ export interface User {
         other?: string;
     }
 }
+
+export interface StreamKey {
+    id: string;
+    key: string;
+    name: string;
+    isActive: boolean;
+    isLive?: boolean;
+    createdAt: Date;
+    lastUsed?: Date;
+    // Livepeer-specific fields
+    livepeerStreamId?: string;
+    playbackUrl?: string;
+}

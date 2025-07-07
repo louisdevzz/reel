@@ -1,121 +1,137 @@
-import NodeMediaServer from 'node-media-server';
 import { streamKeyService } from './src/services/streamKeyService';
 import { streamSessionService } from './src/services/streamSessionService';
 import { websocketService } from './src/services/websocketService';
+import { Livepeer } from 'livepeer';
 import dotenv from 'dotenv';
-import path from 'path';
-
 
 dotenv.config();
 
-console.log('[NodeMediaServer] Starting media server...');
+console.log('[LivepeerService] Starting Livepeer integration service...');
 
-const config = {
-  rtmp: {
-    port: parseInt(process.env.NMS_RTMP_PORT || '1935', 10),
-    chunk_size: 60000,
-    gop_cache: true,
-    ping: 30,
-    ping_timeout: 60,
-  },
-  http: {
-    port: parseInt(process.env.NMS_HTTP_PORT || '8000', 10),
-    allow_origin: '*',
-    mediaroot: path.join(__dirname, 'media'),
-    api: true, // Enable NMS API and HTTP-FLV playback
-    // HTTP-FLV is available at http://localhost:8000/live/{streamKey}.flv
-  },
-  static: {
-    router: '/',
-    root: path.join(__dirname, 'media'),
-  },
-  record: {
-    path: path.join(__dirname, 'media/record'),
-  },
-  auth: {
-    api: true,
-    api_user: 'admin',
-    api_pass: 'admin',
-    play: false,
-    publish: false, // Disable built-in authentication, use custom logic
-    secret: 'nodemedia2017secretstring',
-  },
-  trans: {
-    ffmpeg: process.env.FFMPEG_PATH || '/usr/bin/ffmpeg',
-    tasks: [
-      {
-        app: 'live',
-        hls: true,
-        hlsFlags: '[hls_time=2:hls_list_size=3:hls_flags=delete_segments]',
-        hlsKeep: true,
-        dash: true,
-        dashFlags: '[f=dash:window_size=3:extra_window_size=5]',
-      },
-    ],
-  },
-};
+// Initialize Livepeer client
+const livepeer = new Livepeer({
+  apiKey: process.env.LIVEPEER_API_KEY || '',
+});
 
-const nms = new NodeMediaServer(config);
+// Polling interval to check stream status (in milliseconds)
+const POLLING_INTERVAL = 10000; // 10 seconds
 
+// Store active streams and their polling intervals
+const activeStreams = new Map<string, NodeJS.Timeout>();
 
-// Handle stream start (postPublish)
-nms.on('postPublish', async (stream: any) => {
-  
-  // Extract stream key from stream name
-  const streamKey = stream.streamName;
-  if (streamKey) {
-    try {
-      console.log(`[NodeMediaServer] Processing stream start for key: ${streamKey}`);
+// Function to check stream status from Livepeer
+async function checkStreamStatus(streamKey: string) {
+  try {
+    const streamKeyData = await streamKeyService.getStreamKeyByKey(streamKey);
+    if (!streamKeyData?.livepeerStreamId) {
+      console.log(`[LivepeerService] No Livepeer stream ID found for key: ${streamKey}`);
+      return;
+    }
+
+    const streamStatus = await livepeer.stream.get(streamKeyData.livepeerStreamId);
+    const stream = streamStatus.stream;
+
+    if (stream) {
+      const isLive = stream.isActive || false;
       
-      // First, get stream key data to ensure it exists
-      const streamKeyData = await streamKeyService.getStreamKeyByKey(streamKey);
-      if (!streamKeyData) {
-        return;
+      // Update local database status
+      await streamSessionService.updateStreamKeyLiveStatus(streamKey, isLive);
+      
+      // If stream is no longer live, stop polling and clean up
+      if (!isLive) {
+        const pollingInterval = activeStreams.get(streamKey);
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          activeStreams.delete(streamKey);
+        }
+        
+        // Stop the current live session if exists
+        const liveSession = await streamSessionService.getLiveSessionByStreamKey(streamKey);
+        if (liveSession && liveSession.stream_sessions && liveSession.stream_sessions.id) {
+          await streamSessionService.stopSession(liveSession.stream_sessions.id);
+          console.log(`[LivepeerService] Stopped live session for stream key: ${streamKey}`);
+        } else if (liveSession && liveSession.id) {
+          await streamSessionService.stopSession(liveSession.id);
+          console.log(`[LivepeerService] Stopped live session for stream key: ${streamKey}`);
+        }
       }
-    
-      await streamSessionService.updateStreamKeyLiveStatus(streamKey, true);
       
       // Broadcast status update to WebSocket clients
-      console.log(`[NodeMediaServer] Broadcasting status update for ${streamKey}`);
       await websocketService.broadcastStatusUpdate(streamKey);
       
-      console.log(`[NodeMediaServer] Stream started successfully for key: ${streamKey}`);
-    } catch (error) {
-      console.error('[NodeMediaServer] Error handling postPublish:', error);
-      console.error('[NodeMediaServer] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.log(`[LivepeerService] Stream status updated for key: ${streamKey}, isLive: ${isLive}`);
     }
+  } catch (error) {
+    console.error(`[LivepeerService] Error checking stream status for ${streamKey}:`, error);
   }
-});
+}
 
-// Handle stream end (donePublish)
-nms.on('donePublish', async (stream: any) => {
-  // Extract stream key from stream name
-  const streamKey = stream.streamName;
-  if (streamKey) {
-    try {
-      console.log(`[NodeMediaServer] Processing stream end for key: ${streamKey}`);
-      
-      // Update stream key to isLive = false
-      await streamSessionService.updateStreamKeyLiveStatus(streamKey, false);
-      
-      // Stop the current live session if exists
-      const liveSession = await streamSessionService.getLiveSessionByStreamKey(streamKey);
-      if (liveSession && liveSession.stream_sessions && liveSession.stream_sessions.id) {
-        await streamSessionService.stopSession(liveSession.stream_sessions.id);
-        console.log(`[NodeMediaServer] Stopped live session for stream key: ${streamKey}`);
-      } else if (liveSession && liveSession.id) {
-        await streamSessionService.stopSession(liveSession.id);
-        console.log(`[NodeMediaServer] Stopped live session for stream key: ${streamKey}`);
+// Function to start monitoring a stream
+function startStreamMonitoring(streamKey: string) {
+  // Stop existing monitoring if any
+  const existingInterval = activeStreams.get(streamKey);
+  if (existingInterval) {
+    clearInterval(existingInterval);
+  }
+  
+  // Start new monitoring
+  const interval = setInterval(() => checkStreamStatus(streamKey), POLLING_INTERVAL);
+  activeStreams.set(streamKey, interval);
+  
+  console.log(`[LivepeerService] Started monitoring stream: ${streamKey}`);
+}
+
+// Function to stop monitoring a stream
+function stopStreamMonitoring(streamKey: string) {
+  const interval = activeStreams.get(streamKey);
+  if (interval) {
+    clearInterval(interval);
+    activeStreams.delete(streamKey);
+    console.log(`[LivepeerService] Stopped monitoring stream: ${streamKey}`);
+  }
+}
+
+// Initialize monitoring for existing active streams
+async function initializeActiveStreams() {
+  try {
+    const activeStreamKeys = await streamKeyService.getAllStreamKeys();
+    for (const streamKey of activeStreamKeys) {
+      if (streamKey.isLive) {
+        startStreamMonitoring(streamKey.key);
       }
-      
-      await websocketService.broadcastStatusUpdate(streamKey);
-    } catch (error) {
-      console.error('[NodeMediaServer] Error handling donePublish:', error);
     }
+    console.log(`[LivepeerService] Initialized monitoring for ${activeStreamKeys.filter(sk => sk.isLive).length} active streams`);
+  } catch (error) {
+    console.error('[LivepeerService] Error initializing active streams:', error);
   }
-});
+}
 
-nms.run();
+// Start the service
+async function startLivepeerService() {
+  try {
+    // Initialize monitoring for existing active streams
+    await initializeActiveStreams();
+    
+    console.log(`🚀 Livepeer Service is running and monitoring streams`);
+    console.log(`📡 RTMP URL: rtmp://rtmp.livepeer.com/live`);
+    console.log(`🌐 WebRTC URL: https://playback.livepeer.studio/webrtc/{streamKey}`);
+    
+    // Keep the process running
+    setInterval(() => {
+      // Heartbeat to keep the service alive
+      console.log(`[LivepeerService] Service heartbeat - monitoring ${activeStreams.size} streams`);
+    }, 60000); // Every minute
+    
+  } catch (error) {
+    console.error('[LivepeerService] Error starting service:', error);
+    process.exit(1);
+  }
+}
 
-console.log(`🚀 RTMP Server is running on rtmp://localhost:${config.rtmp.port}/live/`);
-console.log(`🌐 HLS Server is running on http://localhost:${config.http.port}/live/`);
+// Export functions for external use
+export { startStreamMonitoring, stopStreamMonitoring, checkStreamStatus };
+
+// Start the service if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startLivepeerService();
+}

@@ -8,6 +8,10 @@ export interface StreamKey {
   isLive?: boolean;
   createdAt: string;
   lastUsed?: string;
+  // Livepeer-specific fields
+  livepeerStreamId?: string;
+  playbackId?: string;
+  playbackUrl?: string;
 }
 
 export interface StreamSession {
@@ -205,6 +209,101 @@ class ApiService {
     }
   }
 
+  async regenerateStreamKey(id: string): Promise<StreamKey | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/${id}/regenerate`, {
+        method: 'POST',
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to regenerate stream key:', error);
+      return null;
+    }
+  }
+
+  // Livepeer Stream Status APIs
+  async checkLivepeerStreamStatus(streamId: string): Promise<{ isActive: boolean; isLive: boolean } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: { isActive: boolean; isLive: boolean } }>(`/stream-keys/livepeer/status/${streamId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to check Livepeer stream status:', error);
+      return null;
+    }
+  }
+
+  async getLivepeerStreamInfo(streamId: string): Promise<{
+    streamId: string;
+    playbackId: string;
+    playbackUrl: string;
+    isActive: boolean;
+    isLive: boolean;
+  } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/livepeer/info/${streamId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get Livepeer stream info:', error);
+      return null;
+    }
+  }
+
+  async getLivepeerStreamInfoByPlaybackId(playbackId: string): Promise<{
+    streamId: string;
+    playbackId: string;
+    playbackUrl: string;
+    isActive: boolean;
+    isLive: boolean;
+  } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/livepeer/playback/${playbackId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get Livepeer stream info by playback ID:', error);
+      return null;
+    }
+  }
+
+  async getStreamingInfo(id: string): Promise<{
+    streamKey: string;
+    rtmpUrl: string;
+    webRtcUrl: string;
+    playbackUrl?: string;
+    streamId?: string;
+    playbackId?: string;
+    isActive: boolean;
+    isLive?: boolean;
+  } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/${id}/streaming-info`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get streaming info:', error);
+      return null;
+    }
+  }
+
+  async getStreamingInfoByUsername(username: string): Promise<{
+    streamKey: string;
+    rtmpUrl: string;
+    webRtcUrl: string;
+    playbackUrl?: string;
+    streamId?: string;
+    playbackId?: string;
+    isActive: boolean;
+    isLive?: boolean;
+  } | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/username/${username}/streaming-info`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get streaming info by username:', error);
+      return null;
+    }
+  }
+
+
+
   // Stream Session APIs
   async getSessions(): Promise<StreamSession[]> {
     try {
@@ -231,6 +330,10 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/sessions/live/${streamKey}`);
       return response.data;
     } catch (error) {
+      // 404 is expected when there's no live session - don't log as error
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
       console.error('Failed to get live session by stream key:', error);
       return null;
     }

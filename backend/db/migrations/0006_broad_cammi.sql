@@ -1,1 +1,0 @@
-ALTER TABLE "shorts" ADD COLUMN "bookmarks" integer DEFAULT 0 NOT NULL;

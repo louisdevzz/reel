@@ -6,6 +6,10 @@ export interface StreamKey {
   isLive?: boolean;
   createdAt: Date;
   lastUsed?: Date;
+  // Livepeer-specific fields
+  livepeerStreamId?: string;
+  playbackId?: string;
+  playbackUrl?: string;
 }
 
 export interface StreamSession {

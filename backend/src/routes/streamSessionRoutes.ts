@@ -14,6 +14,16 @@ router.get('/active', async (req, res) => {
   await streamSessionController.getActiveSessions(req, res);
 });
 
+// GET /api/sessions/status - Get stream status by stream key
+router.get('/status', async (req, res) => {
+  await streamSessionController.getStreamStatusByKey(req, res);
+});
+
+// GET /api/sessions/live/:streamKey - Get live session by stream key
+router.get('/live/:streamKey', async (req, res) => {
+  await streamSessionController.getLiveSessionByStreamKey(req, res);
+});
+
 // GET /api/sessions/:id - Get session by ID
 router.get('/:id', async (req, res) => {
   await streamSessionController.getSessionById(req, res);
@@ -52,16 +62,6 @@ router.get('/:id/stats', async (req, res) => {
 // PUT /api/sessions/:id/stats - Update stream stats
 router.put('/:id/stats', async (req, res) => {
   await streamSessionController.updateStreamStats(req, res);
-});
-
-// GET /api/sessions/status - Get stream status by stream key
-router.get('/status', async (req, res) => {
-  await streamSessionController.getStreamStatusByKey(req, res);
-});
-
-// GET /api/sessions/live/:streamKey - Get live session by stream key
-router.get('/live/:streamKey', async (req, res) => {
-  await streamSessionController.getLiveSessionByStreamKey(req, res);
 });
 
 export default router;

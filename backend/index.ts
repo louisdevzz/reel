@@ -57,8 +57,6 @@ async function initializeServices() {
     
     // Initialize background workers
     await workerService.startWorkers();
-    console.log('Starting background workers...');
-    
     console.log('Background workers started');
   } catch (error) {
     console.error('Failed to initialize services:', error);
@@ -68,9 +66,6 @@ async function initializeServices() {
 // Start server
 const server = app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`RTMP Server is running on rtmp://localhost:1935/live/`);
-  console.log(`HLS Server is running on http://localhost:8000/live/`);
-  
   await initializeServices();
   
   // Initialize WebSocket service after server is ready

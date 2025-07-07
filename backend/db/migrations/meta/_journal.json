@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1751402416354,
-      "tag": "0000_sleepy_yellowjacket",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1751403166503,
-      "tag": "0001_strange_wonder_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1751404474891,
-      "tag": "0002_flat_tarantula",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1751406893997,
-      "tag": "0003_mysterious_magneto",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1751490168794,
-      "tag": "0004_polite_taskmaster",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1751490570675,
-      "tag": "0005_premium_triton",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1751496957525,
-      "tag": "0006_broad_cammi",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1751503486885,
-      "tag": "0007_salty_joshua_kane",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1751503609072,
-      "tag": "0008_flaky_lord_hawal",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1751511468848,
-      "tag": "0009_famous_mystique",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1751579999152,
-      "tag": "0010_orange_robbie_robertson",
+      "when": 1751894950993,
+      "tag": "0000_icy_gwen_stacy",
       "breakpoints": true
     }
   ]

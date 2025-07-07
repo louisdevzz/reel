@@ -359,4 +359,231 @@ export class StreamKeyController {
       });
     }
   }
+
+  // Get streaming information for a stream key
+  async getStreamingInfo(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stream key ID is required',
+        });
+      }
+
+      const streamKey = await streamKeyService.getStreamKeyById(id);
+      
+      if (!streamKey) {
+        return res.status(404).json({
+          success: false,
+          message: 'Stream key not found',
+        });
+      }
+
+      // Get Livepeer streaming URLs
+      const rtmpUrl = streamKeyService.getRtmpUrl();
+      const webRtcUrl = streamKeyService.getWebRtcUrl(streamKey.key);
+
+      res.json({
+        success: true,
+        data: {
+          streamKey: streamKey.key,
+          rtmpUrl,
+          webRtcUrl,
+          playbackUrl: streamKey.playbackUrl,
+          streamId: streamKey.livepeerStreamId,
+          playbackId: streamKey.playbackId,
+          isActive: streamKey.isActive,
+          isLive: streamKey.isLive,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get streaming information',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get streaming information by username
+  async getStreamingInfoByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.params;
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is required',
+        });
+      }
+
+      const streamKey = await streamKeyService.getStreamKeyByUsername(username);
+      
+      if (!streamKey) {
+        return res.status(404).json({
+          success: false,
+          message: 'Stream key not found for this username',
+        });
+      }
+
+      // Get Livepeer streaming URLs
+      const rtmpUrl = streamKeyService.getRtmpUrl();
+      const webRtcUrl = streamKeyService.getWebRtcUrl(streamKey.key);
+
+      res.json({
+        success: true,
+        data: {
+          streamKey: streamKey.key,
+          rtmpUrl,
+          webRtcUrl,
+          playbackUrl: streamKey.playbackUrl,
+          streamId: streamKey.livepeerStreamId,
+          playbackId: streamKey.playbackId,
+          isActive: streamKey.isActive,
+          isLive: streamKey.isLive,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get streaming information',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get Livepeer stream status
+  async getLivepeerStreamStatus(req: Request, res: Response) {
+    try {
+      const { streamId } = req.params;
+      
+      if (!streamId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stream ID is required',
+        });
+      }
+
+      console.log(`🔍 Checking Livepeer status for stream: ${streamId}`);
+      const streamStatus = await streamKeyService.getStreamStatus(streamId);
+      
+      if (!streamStatus) {
+        console.log(`❌ Stream not found on Livepeer: ${streamId}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Stream not found on Livepeer',
+        });
+      }
+
+      const result = {
+        isActive: streamStatus.isActive || false,
+        isLive: streamStatus.isLive || false,
+      };
+
+      console.log(`✅ Livepeer status for ${streamId}:`, result);
+      
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error(`❌ Error getting Livepeer status for ${req.params.streamId}:`, error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get Livepeer stream status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get Livepeer stream info
+  async getLivepeerStreamInfo(req: Request, res: Response) {
+    try {
+      const { streamId } = req.params;
+      
+      if (!streamId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stream ID is required',
+        });
+      }
+
+      const streamStatus = await streamKeyService.getStreamStatus(streamId);
+      
+      if (!streamStatus) {
+        return res.status(404).json({
+          success: false,
+          message: 'Stream not found on Livepeer',
+        });
+      }
+
+      // In Livepeer, the stream ID is actually the playback ID for HLS URLs
+      // The playback URL format is: https://livepeercdn.studio/hls/{playbackId}/index.m3u8
+      const playbackId = streamStatus.id; // This is the actual playback ID
+      const playbackUrl = `https://livepeercdn.studio/hls/${playbackId}/index.m3u8`;
+
+      res.json({
+        success: true,
+        data: {
+          streamId: streamStatus.id,
+          playbackId: playbackId,
+          playbackUrl: playbackUrl,
+          isActive: streamStatus.isActive || false,
+          isLive: streamStatus.isLive || false,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get Livepeer stream info',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get Livepeer stream info by playback ID
+  async getLivepeerStreamInfoByPlaybackId(req: Request, res: Response) {
+    try {
+      const { playbackId } = req.params;
+      
+      if (!playbackId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playback ID is required',
+        });
+      }
+
+      // For Livepeer, the playback ID is the same as the stream ID
+      // So we can use the same method to get stream status
+      const streamStatus = await streamKeyService.getStreamStatus(playbackId);
+      
+      if (!streamStatus) {
+        return res.status(404).json({
+          success: false,
+          message: 'Stream not found on Livepeer',
+        });
+      }
+
+      const playbackUrl = `https://livepeercdn.studio/hls/${playbackId}/index.m3u8`;
+
+      res.json({
+        success: true,
+        data: {
+          streamId: streamStatus.id,
+          playbackId: playbackId,
+          playbackUrl: playbackUrl,
+          isActive: streamStatus.isActive || false,
+          isLive: streamStatus.isLive || false,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get Livepeer stream info',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
 } 

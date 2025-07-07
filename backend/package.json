@@ -29,6 +29,7 @@
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.2",
     "express": "^5.1.0",
+    "livepeer": "^3.5.0",
     "multer": "^2.0.1",
     "node-media-server": "^4.0.18",
     "postgres": "^3.4.7",

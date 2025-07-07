@@ -180,6 +180,10 @@ export const streamKeys = pgTable('stream_keys', {
   isLive: boolean('is_live').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   lastUsed: timestamp('last_used'),
+  // Livepeer-specific fields
+  livepeerStreamId: text('livepeer_stream_id'),
+  playbackId: text('playback_id'),
+  playbackUrl: text('playback_url'),
 })
 
 // Stream sessions table to track live streaming sessions

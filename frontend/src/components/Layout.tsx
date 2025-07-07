@@ -116,11 +116,11 @@ export function Layout({
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/videos" className="text-white hover:bg-gray-800 cursor-pointer">
+                  <Link to="/reels" className="text-white hover:bg-gray-800 cursor-pointer">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Videos
+                    Reels
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -204,6 +204,16 @@ export function Layout({
                       <DropdownMenuItem asChild>
                         <Link to="/u/$username" params={{ username: user.username }} className="text-white hover:bg-gray-800 cursor-pointer">
                           View Profile
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {user && (
+                    <>
+                      <DropdownMenuSeparator className="bg-[#232327]" />
+                      <DropdownMenuItem asChild>
+                        <Link to="/wallet" className="text-white hover:bg-gray-800 cursor-pointer">
+                          Wallet
                         </Link>
                       </DropdownMenuItem>
                     </>

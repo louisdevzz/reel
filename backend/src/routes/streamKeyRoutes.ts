@@ -59,4 +59,29 @@ router.post('/:id/regenerate', async (req, res) => {
   await streamKeyController.regenerateStreamKey(req, res);
 });
 
+// GET /api/stream-keys/:id/streaming-info - Get streaming information
+router.get('/:id/streaming-info', async (req, res) => {
+  await streamKeyController.getStreamingInfo(req, res);
+});
+
+// GET /api/stream-keys/username/:username/streaming-info - Get streaming information by username
+router.get('/username/:username/streaming-info', async (req, res) => {
+  await streamKeyController.getStreamingInfoByUsername(req, res);
+});
+
+// GET /api/stream-keys/livepeer/status/:streamId - Get Livepeer stream status
+router.get('/livepeer/status/:streamId', async (req, res) => {
+  await streamKeyController.getLivepeerStreamStatus(req, res);
+});
+
+// GET /api/stream-keys/livepeer/info/:streamId - Get Livepeer stream info
+router.get('/livepeer/info/:streamId', async (req, res) => {
+  await streamKeyController.getLivepeerStreamInfo(req, res);
+});
+
+// GET /api/stream-keys/livepeer/playback/:playbackId - Get Livepeer stream info by playback ID
+router.get('/livepeer/playback/:playbackId', async (req, res) => {
+  await streamKeyController.getLivepeerStreamInfoByPlaybackId(req, res);
+});
+
 export default router; 

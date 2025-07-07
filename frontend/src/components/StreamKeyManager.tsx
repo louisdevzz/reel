@@ -14,7 +14,6 @@ interface StreamKeyManagerProps {
 export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   const { currentUser, isConnected } = useUser()
   const [streamKeys, setStreamKeys] = useState<StreamKey[]>([])
-  const [selectedKey, setSelectedKey] = useState<StreamKey | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -38,12 +37,18 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   const loadStreamKeys = async () => {
     setLoadingKeys(true)
     try {
-      const keys = await apiService.getStreamKeyByUserId(currentUser?.id || '')
-      // Ensure keys is always an array
-      setStreamKeys(keys ? [keys] : [])
+      // Get user's stream key if it exists
+      const userStreamKey = await apiService.getStreamKeyByUserId(currentUser?.id || '')
+      
+      if (userStreamKey) {
+        setStreamKeys([userStreamKey])
+        // Không cần auto-select nữa
+        onStreamKeySelect?.(userStreamKey.key)
+      } else {
+        setStreamKeys([])
+      }
     } catch (error) {
       console.error('Error loading stream keys:', error)
-      // Set empty array on error to prevent mapping issues
       setStreamKeys([])
     } finally {
       setLoadingKeys(false)
@@ -60,9 +65,11 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
         setStreamKeys(prev => [...prev, newKey])
         setNewKeyName('')
         setShowCreateDialog(false)
+        toast.success('Stream key created successfully!')
       }
     } catch (error) {
       console.error('Error creating stream key:', error)
+      toast.error('Failed to create stream key. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -79,8 +86,8 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
     try {
       await apiService.deleteStreamKey(keyToDelete.id)
       setStreamKeys(prev => prev.filter(key => key.id !== keyToDelete.id))
-      if (selectedKey?.id === keyToDelete.id) {
-        setSelectedKey(null)
+      if (streamKeys.length === 0) {
+        onStreamKeySelect?.('') // Clear the selected key if no keys left
       }
       setShowDeleteDialog(false)
       setKeyToDelete(null)
@@ -95,24 +102,20 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
   }
 
   const confirmRegenerateKey = async () => {
-    if (!keyToRegenerate || !currentUser) return
+    if (!keyToRegenerate) return
 
     try {
-      // For now, we'll create a new key with the same name and delete the old one
-      // since the backend doesn't have a regenerate endpoint yet
-      const newKey = await apiService.createStreamKey(keyToRegenerate.name, currentUser.id)
+      const newKey = await apiService.regenerateStreamKey(keyToRegenerate.id);
       if (newKey) {
-        await apiService.deleteStreamKey(keyToRegenerate.id)
-        
-        setStreamKeys(prev => prev.map(key => key.id === keyToRegenerate.id ? newKey : key))
-        if (selectedKey?.id === keyToRegenerate.id) {
-          setSelectedKey(newKey)
+        setStreamKeys(prev => prev.map(key => key.id === keyToRegenerate.id ? newKey : key));
+        if (streamKeys.length === 0) {
+          onStreamKeySelect?.('') // Clear the selected key if no keys left
         }
       }
-      setShowRegenerateDialog(false)
-      setKeyToRegenerate(null)
+      setShowRegenerateDialog(false);
+      setKeyToRegenerate(null);
     } catch (error) {
-      console.error('Error regenerating stream key:', error)
+      console.error('Error regenerating stream key:', error);
     }
   }
 
@@ -152,27 +155,28 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
     downloadConfig(config, filename)
   }
 
-  const handleSelectKey = (key: StreamKey) => {
-    setSelectedKey(key)
-    onStreamKeySelect?.(key.key)
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Stream Keys</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Stream Key</h3>
+          <p className="text-sm text-gray-400">Each user can have only one stream key</p>
+        </div>
         <div className="flex gap-2">
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition-colors">
-                Create New Key
+              <button 
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition-colors"
+                disabled={streamKeys.length > 0}
+              >
+                {streamKeys.length > 0 ? 'Key Exists' : 'Create Stream Key'}
               </button>
             </DialogTrigger>
             <DialogContent className="bg-zinc-900 text-white">
               <DialogHeader>
                 <DialogTitle>Create New Stream Key</DialogTitle>
                 <DialogDescription>
-                  Create a new stream key for your live stream.
+                  Create a new stream key for your live stream. You can only have one stream key per account.
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-4">
@@ -216,91 +220,82 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
           </div>
         ) : !Array.isArray(streamKeys) || streamKeys.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
-            <p>No stream keys created yet.</p>
-            <p className="text-sm">Create your first stream key to get started.</p>
+            <p>No stream key created yet.</p>
+            <p className="text-sm">Click "Create Stream Key" to get started with live streaming.</p>
           </div>
         ) : (
-          streamKeys.map((key) => (
-            <div
-              key={key.id}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedKey?.id === key.id
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-white/10 hover:border-white/20'
-              }`}
-              onClick={() => handleSelectKey(key)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className="font-semibold">{key.name}</h4>
-                    {key.isActive && (
-                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <code onClick={(e) => {
-                        e.stopPropagation()
-                        handleCopyKey(key.key)
-                        toast.success('Copied to clipboard')
-                      }} className="font-mono hover:text-white">{formatStreamKey(key.key)}</code>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Created: {new Date(key.createdAt).toLocaleDateString()}
-                    {key.lastUsed && (
-                      <span className="ml-4">
-                        Last used: {new Date(key.lastUsed).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
+          <div
+            className={`p-4 border rounded-lg transition-colors border-purple-500 bg-purple-500/10`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-semibold">{streamKeys[0].name}</h4>
+                  {streamKeys[0].isActive && (
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                      Active
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-gray-400 hover:text-white p-1 rounded transition-colors"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-zinc-800 border border-white/10 text-white">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedKey(key)
-                          setShowConfigDialog(true)
-                        }}
-                        className="text-blue-400 hover:text-blue-300 hover:bg-zinc-700 cursor-pointer"
-                      >
-                        Config
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRegenerateKey(key)
-                        }}
-                        className="text-yellow-400 hover:text-yellow-300 hover:bg-zinc-700 cursor-pointer"
-                      >
-                        Regenerate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteKey(key)
-                        }}
-                        className="text-red-400 hover:text-red-300 hover:bg-zinc-700 cursor-pointer"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <code onClick={(e) => {
+                      e.stopPropagation()
+                      handleCopyKey(streamKeys[0].key)
+                      toast.success('Copied to clipboard')
+                    }} className="font-mono hover:text-white cursor-pointer">{streamKeys[0].key}</code>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Created: {new Date(streamKeys[0].createdAt).toLocaleDateString()}
+                  {streamKeys[0].lastUsed && (
+                    <span className="ml-4">
+                      Last used: {new Date(streamKeys[0].lastUsed).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
               </div>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-800 border border-white/10 text-white">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowConfigDialog(true)
+                      }}
+                      className="text-blue-400 hover:text-blue-300 hover:bg-zinc-700 cursor-pointer"
+                    >
+                      Config
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRegenerateKey(streamKeys[0])
+                      }}
+                      className="text-yellow-400 hover:text-yellow-300 hover:bg-zinc-700 cursor-pointer"
+                    >
+                      Regenerate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteKey(streamKeys[0])
+                      }}
+                      className="text-red-400 hover:text-red-300 hover:bg-zinc-700 cursor-pointer"
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          ))
+          </div>
         )}
       </div>
 
@@ -313,50 +308,50 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
               Download configuration files for your streaming software.
             </DialogDescription>
           </DialogHeader>
-          {selectedKey && (
+          {streamKeys[0] && (
             <div className="mt-4 space-y-4">
               <div className="border border-white/10 rounded p-4">
                 <label className="block mb-2 font-semibold">Stream Key</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={selectedKey.key}
+                    value={streamKeys[0].key}
                     readOnly
                     className="flex-1 bg-zinc-800 border border-white/10 rounded px-3 py-2 text-white font-mono text-sm"
                   />
                   <button
-                    onClick={() => handleCopyKey(selectedKey.key)}
+                    onClick={() => handleCopyKey(streamKeys[0].key)}
                     className="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-white text-sm transition-colors"
                   >
-                    {copied === selectedKey.key ? 'Copied!' : 'Copy'}
+                    {copied === streamKeys[0].key ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
-                  onClick={() => handleDownloadConfig(selectedKey.key, 'obs')}
+                  onClick={() => handleDownloadConfig(streamKeys[0].key, 'obs')}
                   className="bg-blue-600 hover:bg-blue-700 p-4 rounded text-white transition-colors"
                 >
                   <div className="font-semibold">OBS Studio</div>
                   <div className="text-sm opacity-80">Download config</div>
                 </button>
                 <button
-                  onClick={() => handleDownloadConfig(selectedKey.key, 'slobs')}
+                  onClick={() => handleDownloadConfig(streamKeys[0].key, 'slobs')}
                   className="bg-purple-600 hover:bg-purple-700 p-4 rounded text-white transition-colors"
                 >
                   <div className="font-semibold">Streamlabs OBS</div>
                   <div className="text-sm opacity-80">Download config</div>
                 </button>
                 <button
-                  onClick={() => handleDownloadConfig(selectedKey.key, 'youtube')}
+                  onClick={() => handleDownloadConfig(streamKeys[0].key, 'youtube')}
                   className="bg-red-600 hover:bg-red-700 p-4 rounded text-white transition-colors"
                 >
                   <div className="font-semibold">YouTube Live</div>
                   <div className="text-sm opacity-80">Download config</div>
                 </button>
                 <button
-                  onClick={() => handleDownloadConfig(selectedKey.key, 'facebook')}
+                  onClick={() => handleDownloadConfig(streamKeys[0].key, 'facebook')}
                   className="bg-blue-600 hover:bg-blue-700 p-4 rounded text-white transition-colors"
                 >
                   <div className="font-semibold">Facebook Live</div>
@@ -367,8 +362,10 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
               <div className="bg-zinc-800 p-4 rounded">
                 <h4 className="font-semibold mb-2">Manual Setup Instructions</h4>
                 <div className="text-sm space-y-2">
-                  <p><strong>Server URL:</strong> rtmp://localhost:1935/live/</p>
-                  <p><strong>Stream Key:</strong> {selectedKey.key}</p>
+                  <p><strong>Server URL:</strong> rtmp://rtmp.livepeer.com/live</p>
+                  <p><strong>Stream Key:</strong> {streamKeys[0].key}</p>
+                  <p><strong>Playback URL:</strong> {streamKeys[0].playbackUrl || 'Not available'}</p>
+                  <p><strong>Stream ID:</strong> {streamKeys[0].livepeerStreamId || 'Not available'}</p>
                   <p><strong>Recommended Settings:</strong></p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
                     <li>Encoder: x264</li>
@@ -378,6 +375,15 @@ export function StreamKeyManager({ onStreamKeySelect }: StreamKeyManagerProps) {
                     <li>Preset: veryfast</li>
                     <li>Profile: main</li>
                   </ul>
+                  <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded">
+                    <p className="text-blue-400 font-semibold mb-1">💡 Livepeer Studio Integration</p>
+                    <p className="text-sm text-blue-300">
+                      Your stream is now powered by Livepeer Studio. Use the RTMP URL above with your stream key to start broadcasting.
+                    </p>
+                    <p className="text-sm text-blue-300 mt-1">
+                      The stream will automatically be detected when you start broadcasting from OBS or other streaming software.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

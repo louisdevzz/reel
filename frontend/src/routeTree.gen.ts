@@ -22,6 +22,7 @@ import { Route as ProfileImport } from "./routes/u/$username";
 import { Route as SearchImport } from "./routes/search";
 import { Route as ShortVideoImport } from "./routes/s/$videoId";
 import { Route as VideoImport } from "./routes/v/$videoId";
+import { Route as WalletImport } from "./routes/wallet";
 
 // Create/Update Routes
 const IndexRoute = IndexImport.update({
@@ -87,6 +88,12 @@ const ShortVideoRoute = ShortVideoImport.update({
 const VideoRoute = VideoImport.update({
   id: "/v/$videoId",
   path: "/v/$videoId",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const WalletRoute = WalletImport.update({
+  id: "/wallet",
+  path: "/wallet",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -178,6 +185,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof VideoRoute;
       parentRoute: typeof rootRoute;
     };
+    "/wallet": {
+      id: "/wallet";
+      path: "/wallet";
+      fullPath: "/wallet";
+      preLoaderRoute: typeof WalletRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -196,6 +210,7 @@ export interface FileRoutesByFullPath {
   "/search": typeof SearchRoute;
   "/s/$videoId": typeof ShortVideoRoute;
   "/v/$videoId": typeof VideoRoute;
+  "/wallet": typeof WalletRoute;
 }
 
 export interface FileRoutesByTo {
@@ -211,6 +226,7 @@ export interface FileRoutesByTo {
   "/search": typeof SearchRoute;
   "/s/$videoId": typeof ShortVideoRoute;
   "/v/$videoId": typeof VideoRoute;
+  "/wallet": typeof WalletRoute;
 }
 
 export interface FileRoutesById {
@@ -227,6 +243,7 @@ export interface FileRoutesById {
   "/search": typeof SearchRoute;
   "/s/$videoId": typeof ShortVideoRoute;
   "/v/$videoId": typeof VideoRoute;
+  "/wallet": typeof WalletRoute;
 }
 
 export interface FileRouteTypes {
@@ -244,8 +261,9 @@ export interface FileRouteTypes {
     | "/search"
     | "/s/$videoId"
     | "/v/$videoId"
+    | "/wallet"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/reels" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/upload" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId";
+  to: "/" | "/reels" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/upload" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId" | "/wallet";
   id:
     | "__root__"
     | "/"
@@ -260,6 +278,7 @@ export interface FileRouteTypes {
     | "/search"
     | "/s/$videoId"
     | "/v/$videoId"
+    | "/wallet"
   fileRoutesById: FileRoutesById;
 }
 
@@ -276,6 +295,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute;
   ShortVideoRoute: typeof ShortVideoRoute;
   VideoRoute: typeof VideoRoute;
+  WalletRoute: typeof WalletRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -291,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   ShortVideoRoute: ShortVideoRoute,
   VideoRoute: VideoRoute,
+  WalletRoute: WalletRoute,
 };
 
 export const routeTree = rootRoute

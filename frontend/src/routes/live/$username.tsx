@@ -5,6 +5,7 @@ import { StreamPlayer } from "../../components/StreamPlayer";
 import { ChatSection } from "../../components/ChatSection";
 import { streamKeyService } from "../../lib/streamService";
 import { apiService, User } from "../../lib/apiService";
+import type { StreamKey } from "../../lib/apiService";
 
 export const Route = createFileRoute('/live/$username')({
     component: LiveDetailsPage,
@@ -13,6 +14,7 @@ export const Route = createFileRoute('/live/$username')({
 function LiveDetailsPage() {
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
     const [streamKey, setStreamKey] = useState<string | null>(null);
+    const [streamKeyData, setStreamKeyData] = useState<StreamKey | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<any | null>(null);
@@ -37,23 +39,31 @@ function LiveDetailsPage() {
             try {
                 setIsLoading(true);
                 const key = await streamKeyService.getStreamKeyByUsername(username);
-                setStreamKey(key?.key || null);
-                
-                // If we have a stream key, fetch the live session
                 if (key?.key) {
+                    setStreamKey(key.key);
+                    // Convert createdAt/lastUsed to strings for apiService type compatibility
+                    setStreamKeyData({
+                        ...key,
+                        createdAt: key.createdAt instanceof Date ? key.createdAt.toISOString() : key.createdAt,
+                        lastUsed: key.lastUsed instanceof Date ? key.lastUsed.toISOString() : key.lastUsed,
+                    });
+                    // If we have a stream key, fetch the live session
                     const liveSession = await apiService.getLiveSessionByStreamKey(key.key);
-                    setSession(liveSession.stream_sessions);
+                    setSession(liveSession?.stream_sessions);
+                } else {
+                    setStreamKey(null);
+                    setStreamKeyData(null);
                 }
             } catch (error) {
                 console.error('Error fetching stream key:', error);
                 setStreamKey(null);
+                setStreamKeyData(null);
             } finally {
                 setIsLoading(false);
             }
         };
 
         const fetchUserData = async () => {
-            setIsLoading(true);
             try {
                 const userData = await apiService.getUserByUsername(username);
                 if (userData) {
@@ -64,8 +74,6 @@ function LiveDetailsPage() {
             } catch (err) {
                 console.error('Failed to load user data');
                 console.error('Error fetching user:', err);
-            } finally {
-                setIsLoading(false);
             }
         };
 
@@ -117,7 +125,12 @@ function LiveDetailsPage() {
                             <span className="w-2 h-2 bg-green-400 rounded-full inline-block"></span>43,778 viewers
                         </div>
                     </div> */}
-                    <StreamPlayer streamKey={streamKey}/>
+                    <StreamPlayer 
+                        streamKey={streamKey}
+                        playbackUrl={streamKeyData?.playbackUrl}
+                        streamId={streamKeyData?.livepeerStreamId}
+                        playbackId={streamKeyData?.livepeerStreamId} // Use livepeerStreamId as playbackId
+                    />
                     <div className="flex flex-col gap-4 px-6 pt-8 pb-4 bg-[#18181b]">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div className="flex items-center gap-4">
