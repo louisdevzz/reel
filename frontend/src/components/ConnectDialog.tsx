@@ -25,7 +25,7 @@ export default function ConnectDialog({ open, onOpenChange, connectWallet }: Con
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#121212] text-white">
-        <DialogTitle>Connect your account</DialogTitle>
+        <DialogTitle>Login to your account</DialogTitle>
         <div className="flex flex-col gap-4 mt-4">
           <button
             onClick={connectWallet}

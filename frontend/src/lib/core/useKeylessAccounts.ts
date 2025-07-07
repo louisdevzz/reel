@@ -39,6 +39,10 @@ import {
      */
     disconnectKeylessAccount: () => void;
     /**
+     * Clear all stored data (accounts, active account, ephemeral key pair)
+     */
+    clearAllStoredData: () => void;
+    /**
      * Retrieve the Ephemeral key pair from the store.
      *
      * @returns The Ephemeral key pair if found, otherwise undefined.
@@ -97,8 +101,14 @@ import {
             set({ ephemeralKeyPair: keyPair });
           },
   
-          disconnectKeylessAccount: () => set({ activeAccount: undefined }),
-  
+                    disconnectKeylessAccount: () => set({ activeAccount: undefined }),
+
+          clearAllStoredData: () => set({ 
+            accounts: [], 
+            activeAccount: undefined, 
+            ephemeralKeyPair: undefined 
+          }),
+
           getEphemeralKeyPair: () => {
             const account = get().ephemeralKeyPair;
             return account ? validateEphemeralKeyPair(account) : undefined;

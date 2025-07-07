@@ -13,13 +13,29 @@ interface AuthContextType {
   keylessAccount: string | null
   isWalletConnected: boolean
   isKeylessConnected: boolean
+  isRestoringSession: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Keyless (Google)
-  const { activeAccount: rawKeylessAccount, disconnectKeylessAccount } = useKeylessAccounts()
+  const { 
+    activeAccount: rawKeylessAccount, 
+    disconnectKeylessAccount: originalDisconnectKeylessAccount, 
+    clearAllStoredData,
+    accounts: storedAccounts,
+    switchKeylessAccount,
+    getEphemeralKeyPair
+  } = useKeylessAccounts()
+
+  // Wrapper for disconnectKeylessAccount that also sets logout flag
+  const disconnectKeylessAccount = () => {
+    console.log('Disconnecting keyless account and setting logout flag')
+    originalDisconnectKeylessAccount()
+    localStorage.setItem('keyless_logged_out', 'true')
+  }
+  
   // KeylessAccount type: { address: string, ... } or undefined
   const keylessAccount = rawKeylessAccount?.accountAddress.toString()
   const isKeylessConnected = !!keylessAccount
@@ -27,6 +43,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Wallet (Petra)
   const [walletAccount, setWalletAccount] = useState<string | null>(null)
   const [isWalletConnected, setIsWalletConnected] = useState(false)
+  const [isRestoringSession, setIsRestoringSession] = useState(false)
+
+  // Auto-restore keyless session on mount
+  useEffect(() => {
+    const restoreKeylessSession = async () => {
+      // If already connected, no need to restore
+      if (isKeylessConnected) return
+
+      // Check if user has explicitly logged out by checking localStorage
+      const hasLoggedOut = localStorage.getItem('keyless_logged_out') === 'true'
+      if (hasLoggedOut) {
+        console.log('User has logged out, skipping auto-restore')
+        clearAllStoredData()
+        localStorage.removeItem('keyless_logged_out')
+        return
+      }
+
+      // Check if we have stored accounts and a valid ephemeral key pair
+      if (storedAccounts.length > 0) {
+        console.log('Found stored accounts, attempting to restore session...')
+        setIsRestoringSession(true)
+        const ephemeralKeyPair = getEphemeralKeyPair()
+        
+        if (ephemeralKeyPair) {
+          // Try to restore the first stored account
+          const firstAccount = storedAccounts[0]
+          try {
+            await switchKeylessAccount(firstAccount.idToken.raw)
+            console.log('Successfully restored keyless session')
+          } catch (error) {
+            console.log('Failed to restore keyless session:', error)
+            // If restoration fails, clear the stored data
+            clearAllStoredData()
+          } finally {
+            setIsRestoringSession(false)
+          }
+        } else {
+          // If no valid ephemeral key pair, clear stored data
+          console.log('No valid ephemeral key pair found, clearing stored data')
+          clearAllStoredData()
+          setIsRestoringSession(false)
+        }
+      }
+    }
+
+    // Small delay to ensure Zustand store is hydrated
+    const timer = setTimeout(restoreKeylessSession, 100)
+    return () => clearTimeout(timer)
+  }, [storedAccounts, isKeylessConnected, getEphemeralKeyPair, switchKeylessAccount, clearAllStoredData])
 
   // Check wallet connection on mount
   useEffect(() => {
@@ -89,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       keylessAccount: keylessAccount || null,
       isWalletConnected,
       isKeylessConnected,
+      isRestoringSession,
     }}>
       {children}
     </AuthContext.Provider>
