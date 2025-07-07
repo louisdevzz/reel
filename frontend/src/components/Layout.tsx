@@ -147,6 +147,17 @@ export function Layout({
                     NFTs
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/wallet" className="text-white hover:bg-gray-800 cursor-pointer">
+                    {/* Wallet icon (simple wallet outline) */}
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
+                      <rect x="3" y="7" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                      <path d="M21 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" />
+                      <circle cx="17" cy="12" r="1" fill="currentColor" />
+                    </svg>
+                    Wallet
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-[#232327]" />
                 <DropdownMenuItem asChild>
                   <Link to="/upload" className="text-white hover:bg-gray-800 cursor-pointer">
