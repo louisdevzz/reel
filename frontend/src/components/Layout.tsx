@@ -159,6 +159,11 @@ export function Layout({ children }: LayoutProps) {
                     Wallet
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/list_task" className="text-white hover:bg-gray-800 cursor-pointer">
+                    List Task
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-[#232327]" />
                 <DropdownMenuItem asChild>
                   <Link to="/upload" className="text-white hover:bg-gray-800 cursor-pointer">

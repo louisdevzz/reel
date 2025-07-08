@@ -32,24 +32,6 @@ function WalletPage() {
                 <span>VISA</span>
               </div>
             </div>
-            {/* Thẻ phụ */}
-            <div className="bg-[#23232a] border border-gray-700 rounded-xl p-4 text-white opacity-70">
-              <div className="font-bold">Maglo. <span className="text-xs text-gray-400 border-l border-gray-700 px-2 py-1 ml-2">Commercial Bank</span></div>
-              <div className="w-10 h-7 bg-gradient-to-br from-gray-300 to-gray-500 rounded-md flex items-center justify-center my-5">
-                <svg width="28" height="18" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="1" y="1" width="26" height="16" rx="4" fill="#E0E0E0" stroke="#BDBDBD" strokeWidth="2"/>
-                  <rect x="6" y="5" width="16" height="8" rx="2" fill="#BDBDBD"/>
-                  <line x1="8" y1="1" x2="8" y2="17" stroke="#BDBDBD" strokeWidth="1"/>
-                  <line x1="20" y1="1" x2="20" y2="17" stroke="#BDBDBD" strokeWidth="1"/>
-                  <line x1="1" y1="9" x2="27" y2="9" stroke="#BDBDBD" strokeWidth="1"/>
-                </svg>
-              </div>
-              <div className="tracking-widest text-lg my-2">8595 2548 ****</div>
-              <div className="flex justify-between items-center text-sm">
-                <span>09/25</span>
-                <span>VISA</span>
-              </div>
-            </div>
             {/* Số dư */}
             <div className="bg-[#23232a] w-full rounded-xl p-4 mt-2">
               <div className="flex flex-col justify-between items-start w-full">
@@ -74,15 +56,16 @@ function WalletPage() {
               </div>
               <div className="flex justify-between items-center mt-2 text-gray-400">
                 <span>Currency</span>
-                <span>Status</span>
               </div>
               <div className="flex justify-between items-center mt-2 text-white ">
                 <span>USD / US Dollar</span>
-                <span className="text-green-400">Active</span>
               </div>
             </div>
             {/* Thêm thẻ mới */}
-            <button className="w-full mt-4 py-2 bg-[#35354a] text-white rounded-lg hover:bg-[#3b3b4d] transition">+ Add New Card</button>
+            <div className="w-full flex gap-3 mt-4">
+              <button className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">Deposit</button>
+              <button className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Withdraw</button>
+            </div>
           </div>
         </div>
         {/* Cột phải: My Payments */}
