@@ -5,7 +5,7 @@ import { StreamPlayer } from "../../components/StreamPlayer";
 import { ChatSection } from "../../components/ChatSection";
 import { streamKeyService } from "../../lib/streamService";
 import { apiService, User } from "../../lib/apiService";
-import { useUser } from "../../lib/userContext";
+import { useUser } from "../../contexts/userContext";
 import type { StreamKey } from "../../lib/apiService";
 
 export const Route = createFileRoute('/live/$username')({

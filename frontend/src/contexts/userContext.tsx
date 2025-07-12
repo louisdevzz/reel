@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User } from '../types'
-import { apiService } from './apiService'
+import { apiService } from '../lib/apiService'
 
 interface UserContextType {
   currentUser: User | null
   account: string | null
   isConnected: boolean
   setCurrentUser: (user: User | null) => void
+  refetchCurrentUser: () => Promise<void>
 } 
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -17,6 +18,18 @@ export function UserProvider({
   isConnected
 }: { children: ReactNode, account: string | null, isConnected: boolean }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+
+  const refetchCurrentUser = async () => {
+    if (account) {
+      try {
+        const user = await apiService.getUserByAccount(account)
+        setCurrentUser(user)
+      } catch (error) {
+        console.error('Error refetching user:', error)
+        setCurrentUser(null)
+      }
+    }
+  }
 
   useEffect(() => {
     if (account) {
@@ -29,7 +42,7 @@ export function UserProvider({
   }, [account])
 
   return (
-    <UserContext.Provider value={{ currentUser, account, isConnected, setCurrentUser }}>
+    <UserContext.Provider value={{ currentUser, account, isConnected, setCurrentUser, refetchCurrentUser }}>
       {children}
     </UserContext.Provider>
   )

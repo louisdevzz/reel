@@ -51,6 +51,7 @@ export interface User {
   username: string;
   fullName: string;
   description: string;
+  balance: number;
   avatar: string;
   category: string;
   subCategory: string;

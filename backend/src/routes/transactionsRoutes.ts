@@ -49,4 +49,9 @@ router.post('/:id/confirm', async (req, res) => {
   await transactionController.confirmTransactionAndUpdateBalance(req, res)
 })
 
+// Update transaction hash
+router.patch('/:id/hash', async (req, res) => {
+  await transactionController.updateTransactionHash(req, res)
+})
+
 export default router 

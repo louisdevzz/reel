@@ -5,7 +5,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { MoreVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useUser } from '../lib/userContext'
+import { useUser } from '../contexts/userContext'
 
 interface StreamKeyManagerProps {
   onStreamKeySelect?: (streamKey: string) => void

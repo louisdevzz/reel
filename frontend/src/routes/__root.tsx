@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { AuthProvider, useAuth } from '../lib/authContext'
-import { UserProvider } from '../lib/userContext'
+import { AuthProvider, useAuth } from '../contexts/authContext'
+import { UserProvider } from '../contexts/userContext'
 import { Layout } from '../components/Layout'
 import { CustomToaster } from '../components/CustomToaster'
 

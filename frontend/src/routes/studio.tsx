@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { apiService } from '../lib/apiService'
-import { useUser } from '../lib/userContext'
+import { useUser } from '../contexts/userContext'
 import { Upload, MoreVertical, Edit, Trash2, Copy, ExternalLink } from 'lucide-react'
 import {
   Dialog,

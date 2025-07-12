@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react'
 import { apiService, User } from '../lib/apiService'
 import { SearchBar } from './SearchBar'
 import ConnectDialog from './ConnectDialog'
-import { useAuth } from '../lib/authContext'
+import { useAuth } from '../contexts/authContext'
 
 interface LayoutProps {
   children: React.ReactNode

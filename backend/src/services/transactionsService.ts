@@ -223,4 +223,24 @@ export class TransactionService {
     const transaction = await this.getTransactionByTxHash(txHash)
     return !!transaction
   }
+
+  // Update transaction hash
+  async updateTransactionHash(id: string, newTxHash: string): Promise<Transaction | null> {
+    // Check if the new hash already exists for a different transaction
+    const existingTransaction = await this.getTransactionByTxHash(newTxHash)
+    if (existingTransaction && existingTransaction.id !== id) {
+      throw new Error('Transaction hash already exists for another transaction')
+    }
+
+    const [transaction] = await db
+      .update(transactions)
+      .set({
+        txHash: newTxHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(transactions.id, id))
+      .returning()
+
+    return transaction || null
+  }
 } 

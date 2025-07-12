@@ -4,7 +4,7 @@ import { StreamKeyManager } from '../components/StreamKeyManager'
 import { StreamPlayer } from '../components/StreamPlayer'
 import { apiService } from '../lib/apiService'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog'
-import { useUser } from '../lib/userContext'
+import { useUser } from '../contexts/userContext'
 import { toast } from 'react-hot-toast'
 import { streamStatusService } from '../lib/streamService'
 
@@ -20,7 +20,6 @@ function LivestreamPage() {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(true)
   const [isLive, setIsLive] = useState(false)
-  const [wsVersion, setWsVersion] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
   const [showStartDialog, setShowStartDialog] = useState(false)
   const [streamTitle, setStreamTitle] = useState('')

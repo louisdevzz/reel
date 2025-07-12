@@ -3,6 +3,7 @@ import { apiService } from './apiService';
 import { PaymentStatus } from '../components/PaymentLoadingModal';
 import { devnetClient } from './core/constants';
 
+
 export interface DepositRequest {
   amount: number;
   price: number;
@@ -192,20 +193,45 @@ class TransactionService {
         amount: withdrawRequest.amount,
       });
 
-      if (!withdrawResult || !withdrawResult.success) {
+      if (!withdrawResult) {
         return {
           success: false,
-          error: withdrawResult?.message || 'Failed to withdraw tokens via relayer'
+          error: 'Failed to withdraw tokens via relayer'
+        };
+      }
+      const balance = await apiService.getUserBalanceByAddress(withdrawRequest.userAddr);
+      const newBalance = Number(balance) - Number(withdrawRequest.amount);
+
+      // 3. Call relayer service to update balance
+      const updateResult = await relayerService.updateBalance(
+        withdrawRequest.userAddr, 
+        newBalance
+      );
+
+      if (!updateResult) {
+        return {
+          success: false,
+          error: 'Failed to update balance via relayer'
         };
       }
 
-      // 3. Update transaction with actual hash from relayer
+      // 4. Update transaction with actual hash from relayer
       if (withdrawResult.hash) {
-        // Update transaction hash if needed
-        // This would require an additional API endpoint to update transaction hash
+        try {
+          await fetch(`${process.env.PUBLIC_API_URL}/api/transactions/${transaction.id}/hash`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ txHash: withdrawResult.hash }),
+          });
+        } catch (error) {
+          console.error('Failed to update transaction hash:', error);
+          // Continue with the process even if hash update fails
+        }
       }
 
-      // 4. Confirm transaction to update balance in database
+      // 5. Confirm transaction to update balance in database
       const confirmResult = await this.confirmTransaction(transaction.id);
       if (!confirmResult) {
         return {
@@ -369,13 +395,6 @@ class TransactionService {
     try {
       // 1. Check user balance (this would need to be implemented)
       onStatusUpdate(this.createPaymentStatus('processing', 'Checking your REEL balance...'));
-      
-      // TODO: Implement balance check from backend
-      // const balance = await this.getUserBalance(withdrawRequest.userId);
-      // if (balance < withdrawRequest.amount) {
-      //   onStatusUpdate(this.createPaymentStatus('failed', 'Insufficient REEL balance.'));
-      //   return { success: false, error: 'Insufficient REEL balance' };
-      // }
 
       // 2. Process withdraw
       onStatusUpdate(this.createPaymentStatus('processing', 'Processing withdrawal...'));

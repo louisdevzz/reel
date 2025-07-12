@@ -312,4 +312,52 @@ export class TransactionController {
       })
     }
   }
+
+  // Update transaction hash
+  async updateTransactionHash(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      const { txHash } = req.body
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Transaction ID is required',
+        })
+      }
+
+      if (!txHash) {
+        return res.status(400).json({
+          success: false,
+          error: 'Transaction hash is required',
+        })
+      }
+
+      const transaction = await transactionService.updateTransactionHash(id, txHash)
+      if (!transaction) {
+        return res.status(404).json({
+          success: false,
+          error: 'Transaction not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: transaction,
+        message: 'Transaction hash updated successfully',
+      })
+    } catch (error) {
+      console.error('Error updating transaction hash:', error)
+      if (error instanceof Error && error.message.includes('already exists')) {
+        return res.status(409).json({
+          success: false,
+          error: error.message,
+        })
+      }
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      })
+    }
+  }
 } 

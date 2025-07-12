@@ -6,7 +6,7 @@ import * as Player from '@livepeer/react/player';
 import { cn } from '../lib/utils';
 import { Src } from '@livepeer/react';
 import { LoadingIcon } from '@livepeer/react/assets';
-import { useUser } from '../lib/userContext'
+import { useUser } from '../contexts/userContext'
 import { UserRegistrationDialog } from '../components/UserRegistrationDialog'
 
 export const Route = createFileRoute('/')({

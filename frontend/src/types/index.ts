@@ -34,6 +34,7 @@ export interface User {
     rank: number;
     username: string;
     description: string;
+    balance: number;
     avatar: string;
     email: string;
     aptosAddress: string;

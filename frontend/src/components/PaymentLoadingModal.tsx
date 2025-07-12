@@ -71,18 +71,6 @@ export function PaymentLoadingModal({
     }
   };
 
-  const getOperationLabel = () => {
-    return type === 'deposit' ? 'Deposit' : 'Withdraw';
-  };
-
-  const getAmountLabel = () => {
-    return type === 'deposit' ? 'Amount:' : 'Amount:';
-  };
-
-  const getPriceLabel = () => {
-    return type === 'deposit' ? 'Price:' : 'Fee:';
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-[#23232a] border-[#27272a] text-white max-w-md">
@@ -92,21 +80,30 @@ export function PaymentLoadingModal({
             {getStatusTitle()}
           </DialogTitle>
         </DialogHeader>
-        
         <div className="space-y-4">
           {/* Payment Details */}
-          <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a]">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-400">{getAmountLabel()}</span>
-              <span className="font-semibold text-white">{amount} REEL</span>
-            </div>
-            {price && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">{getPriceLabel()}</span>
-                <span className="font-semibold text-white">{price} APT</span>
+          {type === 'withdraw' && (
+            <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a]">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">Amount:</span>
+                <span className="font-semibold text-white">{amount} REEL</span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+          {type === 'deposit' && (
+            <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a]">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">Amount:</span>
+                <span className="font-semibold text-white">{amount} REEL</span>
+              </div>
+              {price && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Price:</span>
+                  <span className="font-semibold text-white">{price} APT</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Status Message */}
           <div className="text-center">
@@ -115,13 +112,23 @@ export function PaymentLoadingModal({
             </p>
           </div>
 
-          {/* Transaction Hash */}
-          {paymentStatus.transactionHash && (
+          {/* Transaction Hash (only for withdraw and only if success) */}
+          {type === 'withdraw' && paymentStatus.status === 'success' && paymentStatus.transactionHash && (
             <div className="bg-[#18181b] rounded-lg p-3 border border-[#27272a]">
               <p className="text-xs text-gray-400 mb-1">Transaction Hash:</p>
-              <p className="text-xs text-white font-mono break-all">
-                {paymentStatus.transactionHash}
-              </p>
+              <a href={`https://explorer.aptoslabs.com/txn/${paymentStatus.transactionHash}?network=devnet`} target="_blank" rel="noopener noreferrer" className="text-xs text-white font-mono break-all hover:underline">
+                {paymentStatus.transactionHash.slice(0,30)}...
+              </a>
+            </div>
+          )}
+
+          {/* Transaction Hash for deposit (if any) */}
+          {type === 'deposit' && paymentStatus.transactionHash && (
+            <div className="bg-[#18181b] rounded-lg p-3 border border-[#27272a]">
+              <p className="text-xs text-gray-400 mb-1">Transaction Hash:</p>
+              <a href={`https://explorer.aptoslabs.com/txn/${paymentStatus.transactionHash}?network=devnet`} target="_blank" rel="noopener noreferrer" className="text-xs text-white font-mono break-all hover:underline">
+                {paymentStatus.transactionHash.slice(0,30)}...
+              </a>
             </div>
           )}
 
@@ -144,7 +151,6 @@ export function PaymentLoadingModal({
                 Done
               </button>
             )}
-            
             {paymentStatus.status === 'failed' && (
               <button
                 onClick={onClose}
@@ -153,11 +159,9 @@ export function PaymentLoadingModal({
                 Close
               </button>
             )}
-
             {(paymentStatus.status === 'processing' || paymentStatus.status === 'pending') && (
               <button
-                onClick={onClose}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg opacity-70 cursor-not-allowed"
                 disabled
               >
                 Please Wait...

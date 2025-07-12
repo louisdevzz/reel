@@ -2,7 +2,7 @@ import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { apiService } from '../../lib/apiService'
 import { viewTrackingService } from '../../lib/viewTrackingService'
-import { useUser } from '../../lib/userContext'
+import { useUser } from '../../contexts/userContext'
 import { CommentSection } from '../../components/CommentSection'
 import { Plus } from 'lucide-react'
 

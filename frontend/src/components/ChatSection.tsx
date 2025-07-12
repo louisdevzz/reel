@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Smile, Send, MessageSquareText } from 'lucide-react';
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react';
 import { chatService } from '../lib/streamService';
-import { useUser } from '../lib/userContext';
+import { useUser } from '../contexts/userContext';
 
 interface ChatMessage {
   id: string;
