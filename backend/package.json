@@ -4,8 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run index.ts",
-    "rtmp": "bun run start-media-server.ts",
     "start": "concurrently \"bun run index.ts\" \"bun run start-media-server.ts\"",
     "start:backend": "bun run index.ts",
     "start:media": "bun run start-media-server.ts",

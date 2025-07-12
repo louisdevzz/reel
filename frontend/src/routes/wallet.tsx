@@ -72,12 +72,25 @@ function WalletPage() {
     }
   };
 
-  // Load user deposit data
+  // Load user deposit data and refetch user data on page access
   useEffect(() => {
     if (currentUser?.id) {
       loadUserTransactionData();
     }
   }, [currentUser?.id]);
+
+  // Refetch user data every time wallet page is accessed and every 60 seconds
+  useEffect(() => {
+    if (isConnected && account) {
+      // Set up interval to refetch every 60 seconds
+      const interval = setInterval(() => {
+        refetchCurrentUser();
+      }, 3000); // 3 seconds
+
+      // Cleanup interval on unmount or when dependencies change
+      return () => clearInterval(interval);
+    }
+  }, [isConnected, account, refetchCurrentUser]);
 
   // Set document title
   useEffect(() => {

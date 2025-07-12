@@ -45,6 +45,31 @@ export interface StreamStats {
   videoCodec: string;
 }
 
+export interface Tip {
+  id: string;
+  tipperId: string;
+  receiverId: string;
+  amount: number;
+  message?: string;
+  txHash: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  tipType: 'general' | 'stream' | 'video' | 'short';
+  streamSessionId?: string;
+  videoId?: string;
+  shortId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TipStats {
+  totalTipsSent: number;
+  totalTipsReceived: number;
+  totalAmountSent: number;
+  totalAmountReceived: number;
+  averageTipSent: number;
+  averageTipReceived: number;
+}
+
 export interface User {
   id: string;
   rank: number;
@@ -1429,6 +1454,229 @@ class ApiService {
     } catch (error) {
       handleError(error, 'getPendingTransactions');
       return [];
+    }
+  }
+
+  // ===== TIP APIs =====
+
+  // Create a new tip
+  async createTip(tipData: {
+    tipperId: string;
+    receiverId: string;
+    amount: number;
+    message?: string;
+    tipType?: 'general' | 'stream' | 'video' | 'short';
+    streamSessionId?: string;
+    videoId?: string;
+    shortId?: string;
+    txHash?: string;
+  }): Promise<Tip | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip }>('/tips', {
+        method: 'POST',
+        body: JSON.stringify(tipData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'createTip');
+      return null;
+    }
+  }
+
+  // Get tip by ID
+  async getTipById(id: string): Promise<Tip | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip }>(`/tips/${id}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipById');
+      return null;
+    }
+  }
+
+  // Get tips sent by authenticated user
+  async getTipsSentByUser(limit: number = 20, offset: number = 0): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/sent/me?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipsSentByUser');
+      return [];
+    }
+  }
+
+  // Get tips received by authenticated user
+  async getTipsReceivedByUser(limit: number = 20, offset: number = 0): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/received/me?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipsReceivedByUser');
+      return [];
+    }
+  }
+
+  // Get user tip statistics
+  async getUserTipStats(): Promise<TipStats | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: TipStats }>('/tips/stats/me');
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getUserTipStats');
+      return null;
+    }
+  }
+
+  // Get tips for a specific stream session
+  async getTipsForStreamSession(streamSessionId: string, limit: number = 50, offset: number = 0): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/stream/${streamSessionId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipsForStreamSession');
+      return [];
+    }
+  }
+
+  // Get tips for a specific video
+  async getTipsForVideo(videoId: string, limit: number = 50, offset: number = 0): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/video/${videoId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipsForVideo');
+      return [];
+    }
+  }
+
+  // Get tips for a specific short
+  async getTipsForShort(shortId: string, limit: number = 50, offset: number = 0): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/short/${shortId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipsForShort');
+      return [];
+    }
+  }
+
+  // Get recent tips (public)
+  async getRecentTips(limit: number = 20): Promise<Tip[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip[] }>(`/tips/recent?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getRecentTips');
+      return [];
+    }
+  }
+
+  // Update tip status (admin/owner only)
+  async updateTipStatus(id: string, status: 'pending' | 'confirmed' | 'failed'): Promise<Tip | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip }>(`/tips/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateTipStatus');
+      return null;
+    }
+  }
+
+  // Update tip transaction hash (admin/owner only)
+  async updateTipTxHash(id: string, txHash: string): Promise<Tip | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: Tip }>(`/tips/${id}/txhash`, {
+        method: 'PATCH',
+        body: JSON.stringify({ txHash }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateTipTxHash');
+      return null;
+    }
+  }
+
+  // Confirm tip and update stats (admin/owner only)
+  async confirmTipAndUpdateStats(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await this.request<{ success: boolean; message: string }>(`/tips/${id}/confirm`, {
+        method: 'POST',
+      });
+      return { success: response.success };
+    } catch (error) {
+      handleError(error, 'confirmTipAndUpdateStats');
+      if (error instanceof Error) {
+        return { success: false, error: error.message };
+      }
+      return { success: false, error: 'Failed to confirm tip' };
+    }
+  }
+
+  // Delete tip (admin only)
+  async deleteTip(id: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/tips/${id}`, {
+        method: 'DELETE',
+      });
+      return true;
+    } catch (error) {
+      handleError(error, 'deleteTip');
+      return false;
+    }
+  }
+
+  // Convenience method to get tips by content type
+  async getTipsByContent(contentId: string, contentType: 'stream' | 'video' | 'short', limit: number = 50, offset: number = 0): Promise<Tip[]> {
+    try {
+      switch (contentType) {
+        case 'stream':
+          return await this.getTipsForStreamSession(contentId, limit, offset);
+        case 'video':
+          return await this.getTipsForVideo(contentId, limit, offset);
+        case 'short':
+          return await this.getTipsForShort(contentId, limit, offset);
+        default:
+          return [];
+      }
+    } catch (error) {
+      handleError(error, 'getTipsByContent');
+      return [];
+    }
+  }
+
+  // Convenience method to send tip to user
+  async sendTipToUser(tipperId: string, receiverId: string, amount: number, message?: string, tipType: 'general' | 'stream' | 'video' | 'short' = 'general', contentId?: string): Promise<Tip | null> {
+    try {
+      const tipData: any = {
+        tipperId,
+        receiverId,
+        amount,
+        message,
+        tipType,
+      };
+
+      // Add content-specific ID based on tip type
+      if (contentId) {
+        switch (tipType) {
+          case 'stream':
+            tipData.streamSessionId = contentId;
+            break;
+          case 'video':
+            tipData.videoId = contentId;
+            break;
+          case 'short':
+            tipData.shortId = contentId;
+            break;
+        }
+      }
+
+      return await this.createTip(tipData);
+    } catch (error) {
+      handleError(error, 'sendTipToUser');
+      return null;
     }
   }
 }

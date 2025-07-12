@@ -11,10 +11,13 @@ import shareRoutes from "./src/routes/shareRoutes";
 import analyticsRoutes from "./src/routes/analyticsRoutes";
 import chatRoutes from "./src/routes/chatRoutes";
 import transactionsRoutes from "./src/routes/transactionsRoutes";
+import tipRoutes from "./src/routes/tipRoutes";
+
 import { websocketService } from "./src/services/websocketService";
 import { redisService } from "./src/services/redisService";
 import { workerService } from "./src/services/workerService";
 import path from 'path';
+
 
 dotenv.config();
 
@@ -40,6 +43,7 @@ app.use('/api/shares', shareRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/transactions', transactionsRoutes);
+app.use('/api/tips', tipRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

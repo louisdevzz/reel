@@ -7,6 +7,7 @@ import { streamKeyService } from "../../lib/streamService";
 import { apiService, User } from "../../lib/apiService";
 import { useUser } from "../../contexts/userContext";
 import type { StreamKey } from "../../lib/apiService";
+import { TipModal } from "../../components/TipModal";
 
 export const Route = createFileRoute('/live/$username')({
     component: LiveDetailsPage,
@@ -21,6 +22,7 @@ function LiveDetailsPage() {
     const [session, setSession] = useState<any | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     const [isCheckingFollow, setIsCheckingFollow] = useState(false);
+    const [isTipModalOpen, setIsTipModalOpen] = useState(false);
     const { username } = Route.useParams();
     const { currentUser } = useUser();
 
@@ -165,6 +167,7 @@ function LiveDetailsPage() {
     }
 
     return (
+        <>
         <div className="relative flex h-screen overflow-hidden bg-[#18181b] text-white">
             <div className={`flex-1 ${isSidebarExpanded ? 'mr-[400px]' : 'mr-0'} h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300`}>
                 <div className="flex flex-col flex-1">
@@ -230,7 +233,12 @@ function LiveDetailsPage() {
                                         {isCheckingFollow ? '...' : (isFollowing ? 'Following' : 'Follow')}
                                     </button>
                                 )}
-                                <button className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]">Tip Now</button>
+                                <button 
+                                    className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]"
+                                    onClick={() => setIsTipModalOpen(true)}
+                                >
+                                    Tip Now
+                                </button>
                             </div>
                         </div>
                         <div className="font-semibold text-lg text-white">
@@ -316,6 +324,16 @@ function LiveDetailsPage() {
                     />
                 )}
             </div>
+            
         </div>
+        <TipModal 
+          open={isTipModalOpen} 
+          onOpenChange={setIsTipModalOpen}
+          receiverId={user?.id}
+          receiverAddress={user?.aptosAddress}
+          tipType="stream"
+          contentId={session?.stream_sessions?.id || session?.id}
+        />
+        </>
     );
 }

@@ -41,6 +41,17 @@ export function UserProvider({
     }
   }, [account])
 
+  // Auto refetch user data every minute when connected
+  useEffect(() => {
+    if (isConnected && account) {
+      const interval = setInterval(() => {
+        refetchCurrentUser()
+      }, 10000) // 10 seconds
+
+      return () => clearInterval(interval)
+    }
+  }, [isConnected, account])
+
   return (
     <UserContext.Provider value={{ currentUser, account, isConnected, setCurrentUser, refetchCurrentUser }}>
       {children}

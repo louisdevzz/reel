@@ -4,6 +4,7 @@ import cors from 'cors';
 //Routes
 import userRouter from "./src/routes/userRoute"
 import withdrawRouter from "./src/routes/withdrawRoute"
+import tipRouter from "./src/routes/tipRoute"
 
 import * as dotenv from "dotenv";
 
@@ -20,6 +21,7 @@ app.use(express.json());
 
 app.use('/api/users', userRouter)
 app.use('/api/withdraw', withdrawRouter)
+app.use('/api/tips', tipRouter)
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -4,8 +4,8 @@ import { Account, Aptos, AptosConfig, Ed25519PrivateKey, Network } from "@aptos-
 dotenv.config();
 
 const PRIVATE_KEY_RELAYER = process.env.PRIVATE_KEY_RELAYER;
-const FACTORY_ADDRESS = "d8ac4ac9cb7b1aab12850a6b2f3247b53725f3a71c44161ec42e38772d62dc2a";
-const FACTORY_MODULE = `${FACTORY_ADDRESS}::factory_reel`;
+const FACTORY_ADDRESS = "2582bc98b3fdebf431729eac9bbc9b3a52647a3471c552571c2c9259e4ab2027";
+const FACTORY_MODULE = `${FACTORY_ADDRESS}::factory_reel_v2`;
 
 const REEL_ADDRESS = "0x26a0989735ee42195aa939ccac20c1c28fce87462230adc46666c0685c7c0f81::coin::Reel"
 const PRIVATE_KEY_TREASURY = process.env.PRIVATE_KEY_TREASURY;

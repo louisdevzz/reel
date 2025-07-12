@@ -92,3 +92,50 @@ export const registerUser = async (userData: UserData) => {
         }
     }
 }
+
+export const sendTip = async(from: string, to: string, amount: number, message?: string, video_id?: string) =>{
+    try{
+        console.log("from", from)
+        console.log("to", to)
+        console.log("amount", amount)
+        console.log("message", message)
+        console.log("video_id", video_id)
+        
+        const txn = await aptos.transaction.build.simple({
+            sender: account_relayer.accountAddress,
+            data: {
+                function: `${FACTORY_MODULE}::send_tip`,
+                functionArguments: [
+                    from, // from
+                    to, // to
+                    amount, // amount
+                    message, // message
+                    video_id
+                ]
+            },
+        });
+    
+        const committedTxn = await aptos.signAndSubmitTransaction({
+          signer: account_relayer,
+          transaction: txn,
+        });
+    
+        const executedTransaction = await aptos.waitForTransaction({
+          transactionHash: committedTxn.hash,
+        });
+
+        console.log("executedTransaction", executedTransaction)
+
+        return {
+            success: true,
+            data: executedTransaction
+        }
+
+    }catch(error){
+        return {
+            success: false,
+            message: "Failed to send tip",
+            error: error
+        }
+    }
+}

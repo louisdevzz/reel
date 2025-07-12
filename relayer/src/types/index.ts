@@ -76,3 +76,41 @@ export interface TreasuryBalanceResponse {
     treasuryAddress: string;
   };
 }
+
+// Tip-related types
+export interface TipData {
+  from: string;
+  to: string;
+  amount: number;
+  message?: string;
+  video_id?: string;
+}
+
+export interface SendTipRequest {
+  tipData: TipData;
+}
+
+export interface SendTipResponse {
+  success: boolean;
+  message: string;
+  transactionHash?: string;
+  fromAddress: string;
+  toAddress: string;
+  amount: number;
+}
+
+export interface TipHistoryResponse {
+  success: boolean;
+  data: {
+    received_tips: TipData[];
+    sent_tips: TipData[];
+  };
+}
+
+export interface TipStatsResponse {
+  success: boolean;
+  data: {
+    total_received: number;
+    total_sent: number;
+  };
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { User } from '../types'
 import { apiService } from '../lib/apiService'
+import { relayerService } from '../lib/relayerService'
 
 interface Category {
   name: string
@@ -148,6 +149,20 @@ export function UserRegistrationDialog({
         aptosAddress,
         category: formData.category,
         subCategory: formData.subCategory,
+        tags: formData.tags,
+        social: formData.social
+      })
+
+      //register user via relayer
+      await relayerService.registerUser({
+        user_addr: aptosAddress,
+        username: formData.username,
+        full_name: formData.fullName,
+        description: formData.description,
+        avatar: formData.avatar,
+        category: formData.category,
+        sub_category: formData.subCategory,
+        email: formData.email,
         tags: formData.tags,
         social: formData.social
       })

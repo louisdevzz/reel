@@ -1,4 +1,4 @@
-module factory::factory_reel {
+module factory::factory_reel_v2 {
     use std::string::{Self, String};
     use std::vector;
     use std::option::{Self, Option};
@@ -9,6 +9,7 @@ module factory::factory_reel {
     use aptos_framework::table::{Self, Table};
     use aptos_framework::table_with_length::{Self, TableWithLength};
 
+
     // Error codes
     const EUSER_NOT_FOUND: u64 = 1;
     const EUSER_ALREADY_EXISTS: u64 = 2;
@@ -16,6 +17,8 @@ module factory::factory_reel {
     const EINVALID_EMAIL: u64 = 4;
     const EINVALID_APTOS_ADDRESS: u64 = 5;
     const EINSUFFICIENT_BALANCE: u64 = 6;
+    const EINVALID_TIP_AMOUNT: u64 = 7;
+    const ETIP_HISTORY_NOT_FOUND: u64 = 8;
 
     // Social media links structure
     struct Social has store, drop, copy {
@@ -77,6 +80,22 @@ module factory::factory_reel {
         is_public: bool,
     }
 
+    // Tip structure
+    struct Tip has store, drop, copy {
+        from: address,
+        to: address,
+        amount: u64,
+        message: Option<String>,
+        video_id: Option<String>, // Optional: tip for specific video
+        createdAt: u64,
+    }
+
+    // Tip history structure for each user
+    struct TipHistory has store, drop, copy {
+        received_tips: vector<Tip>,
+        sent_tips: vector<Tip>,
+    }
+
     // Events
     struct UserRegisteredEvent has drop, store {
         user_id: address,
@@ -119,6 +138,14 @@ module factory::factory_reel {
         new_value: u64,
     }
 
+    struct TipSentEvent has drop, store {
+        from_address: address,
+        to_address: address,
+        amount: u64,
+        message: Option<String>,
+        video_id: Option<String>,
+    }
+
     // Factory resource
     struct Factory has key {
         users: TableWithLength<address, User>,
@@ -127,12 +154,15 @@ module factory::factory_reel {
         aptos_address_to_address: Table<address, address>,
         videos: TableWithLength<String, Video>,
         user_videos: Table<address, vector<String>>, // user_address -> list of video_ids
+        tip_history: Table<address, TipHistory>, // user_address -> tip history
         user_registered_events: EventHandle<UserRegisteredEvent>,
         user_updated_events: EventHandle<UserUpdatedEvent>,
         user_stats_updated_events: EventHandle<UserStatsUpdatedEvent>,
         video_uploaded_events: EventHandle<VideoUploadedEvent>,
         video_updated_events: EventHandle<VideoUpdatedEvent>,
         video_stats_updated_events: EventHandle<VideoStatsUpdatedEvent>,
+        tip_sent_events: EventHandle<TipSentEvent>,
+
     }
 
     // Initialize factory
@@ -145,12 +175,14 @@ module factory::factory_reel {
                 aptos_address_to_address: table::new(),
                 videos: table_with_length::new(),
                 user_videos: table::new(),
+                tip_history: table::new(),
                 user_registered_events: account::new_event_handle<UserRegisteredEvent>(account),
                 user_updated_events: account::new_event_handle<UserUpdatedEvent>(account),
                 user_stats_updated_events: account::new_event_handle<UserStatsUpdatedEvent>(account),
                 video_uploaded_events: account::new_event_handle<VideoUploadedEvent>(account),
                 video_updated_events: account::new_event_handle<VideoUpdatedEvent>(account),
                 video_stats_updated_events: account::new_event_handle<VideoStatsUpdatedEvent>(account),
+                tip_sent_events: account::new_event_handle<TipSentEvent>(account),
             });
         };
     }
@@ -691,6 +723,162 @@ module factory::factory_reel {
     #[view]
     public fun factory_exists(): bool {
         exists<Factory>(@factory)
+    }
+
+    // Send tip to a user
+    public entry fun send_tip(
+        from_address: address,
+        to_address: address,
+        amount: u64,
+        message: Option<String>,
+        video_id: Option<String>,
+    ) acquires Factory {
+        let factory = borrow_global_mut<Factory>(@factory);
+        
+        // Validate addresses
+        assert!(table_with_length::contains(&factory.users, from_address), EUSER_NOT_FOUND);
+        assert!(table_with_length::contains(&factory.users, to_address), EUSER_NOT_FOUND);
+        assert!(from_address != to_address, EINVALID_APTOS_ADDRESS);
+        
+        // Validate amount
+        assert!(amount > 0, EINVALID_TIP_AMOUNT);
+        
+        // Validate video_id if provided
+        if (option::is_some(&video_id)) {
+            let vid = option::borrow(&video_id);
+            assert!(table_with_length::contains(&factory.videos, *vid), EUSER_NOT_FOUND);
+        };
+
+        let tip = Tip {
+            from: from_address,
+            to: to_address,
+            amount,
+            message,
+            video_id,
+            createdAt: timestamp::now_seconds(),
+        };
+        
+        // Update sender's tip history
+        if (table::contains(&factory.tip_history, from_address)) {
+            let sender_history = table::borrow_mut(&mut factory.tip_history, from_address);
+            vector::push_back(&mut sender_history.sent_tips, tip);
+        } else {
+            let new_sender_history = TipHistory {
+                received_tips: vector::empty<Tip>(),
+                sent_tips: vector::empty<Tip>(),
+            };
+            vector::push_back(&mut new_sender_history.sent_tips, tip);
+            table::add(&mut factory.tip_history, from_address, new_sender_history);
+        };
+
+        // Create a copy of tip for receiver's history
+        let tip_for_receiver = Tip {
+            from: from_address,
+            to: to_address,
+            amount,
+            message,
+            video_id,
+            createdAt: timestamp::now_seconds(),
+        };
+
+        // Update receiver's tip history
+        if (table::contains(&factory.tip_history, to_address)) {
+            let receiver_history = table::borrow_mut(&mut factory.tip_history, to_address);
+            vector::push_back(&mut receiver_history.received_tips, tip_for_receiver);
+        } else {
+            let new_receiver_history = TipHistory {
+                received_tips: vector::empty<Tip>(),
+                sent_tips: vector::empty<Tip>(),
+            };
+            vector::push_back(&mut new_receiver_history.received_tips, tip_for_receiver);
+            table::add(&mut factory.tip_history, to_address, new_receiver_history);
+        };
+
+        // Update receiver's balance and donation stats
+        let receiver = table_with_length::borrow_mut(&mut factory.users, to_address);
+        receiver.balance = receiver.balance + amount;
+        receiver.total_donation = receiver.total_donation + amount;
+
+        // Emit tip event
+        event::emit_event(&mut factory.tip_sent_events, TipSentEvent {
+            from_address,
+            to_address,
+            amount,
+            message,
+            video_id,
+        });
+    }
+
+    // Get tip history for a specific address
+    #[view]
+    public fun get_tip_history(user_address: address): TipHistory acquires Factory {
+        let factory = borrow_global<Factory>(@factory);
+        assert!(table::contains(&factory.tip_history, user_address), ETIP_HISTORY_NOT_FOUND);
+        *table::borrow(&factory.tip_history, user_address)
+    }
+
+    // Get received tips for a specific address
+    #[view]
+    public fun get_received_tips(user_address: address): vector<Tip> acquires Factory {
+        let factory = borrow_global<Factory>(@factory);
+        if (table::contains(&factory.tip_history, user_address)) {
+            let history = table::borrow(&factory.tip_history, user_address);
+            history.received_tips
+        } else {
+            vector::empty<Tip>()
+        }
+    }
+
+    // Get sent tips for a specific address
+    #[view]
+    public fun get_sent_tips(user_address: address): vector<Tip> acquires Factory {
+        let factory = borrow_global<Factory>(@factory);
+        if (table::contains(&factory.tip_history, user_address)) {
+            let history = table::borrow(&factory.tip_history, user_address);
+            history.sent_tips
+        } else {
+            vector::empty<Tip>()
+        }
+    }
+
+    // Get total tips received by address
+    #[view]
+    public fun get_total_tips_received(user_address: address): u64 acquires Factory {
+        let factory = borrow_global<Factory>(@factory);
+        if (table::contains(&factory.tip_history, user_address)) {
+            let history = table::borrow(&factory.tip_history, user_address);
+            let total = 0u64;
+            let i = 0u64;
+            let len = vector::length(&history.received_tips);
+            while (i < len) {
+                let tip = vector::borrow(&history.received_tips, i);
+                total = total + tip.amount;
+                i = i + 1;
+            };
+            total
+        } else {
+            0u64
+        }
+    }
+
+    // Get total tips sent by address
+    #[view]
+    public fun get_total_tips_sent(user_address: address): u64 acquires Factory {
+        let factory = borrow_global<Factory>(@factory);
+        if (table::contains(&factory.tip_history, user_address)) {
+            let history = table::borrow(&factory.tip_history, user_address);
+            let total = 0u64;
+            let i = 0u64;
+            let len = vector::length(&history.sent_tips);
+            while (i < len) {
+                let tip = vector::borrow(&history.sent_tips, i);
+                total = total + tip.amount;
+                i = i + 1;
+            };
+            total
+        } else {
+            0u64
+        }
     }
 
 }

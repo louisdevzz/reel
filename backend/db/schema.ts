@@ -220,6 +220,23 @@ export const transactions = pgTable('transactions', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// Tip history table to track all tip transactions
+export const tipHistory = pgTable('tip_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tipperId: uuid('tipper_id').notNull().references(() => users.id), // User who sent the tip
+  receiverId: uuid('receiver_id').notNull().references(() => users.id), // User who received the tip
+  amount: integer('amount').notNull(), // Tip amount in smallest unit
+  message: text('message'), // Optional message with the tip
+  txHash: text('tx_hash').notNull().unique(), // Blockchain transaction hash
+  status: text('status').notNull().default('pending'), // 'pending' | 'confirmed' | 'failed'
+  tipType: text('tip_type').notNull().default('general'), // 'general' | 'stream' | 'video' | 'short'
+  streamSessionId: uuid('stream_session_id').references(() => streamSessions.id), // If tip was during a stream
+  videoId: uuid('video_id').references(() => videos.id), // If tip was for a specific video
+  shortId: uuid('short_id').references(() => shorts.id), // If tip was for a specific short
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Video = typeof videos.$inferSelect
@@ -251,4 +268,6 @@ export type NewStreamKey = typeof streamKeys.$inferInsert
 export type StreamSession = typeof streamSessions.$inferSelect
 export type NewStreamSession = typeof streamSessions.$inferInsert
 export type Transaction = typeof transactions.$inferSelect
-export type NewTransaction = typeof transactions.$inferInsert 
+export type NewTransaction = typeof transactions.$inferInsert
+export type TipHistory = typeof tipHistory.$inferSelect
+export type NewTipHistory = typeof tipHistory.$inferInsert 

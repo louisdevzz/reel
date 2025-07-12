@@ -34,7 +34,7 @@ export interface UserData {
   category: string;
   sub_category: string;
   email: string;
-  tags: string;
+  tags: string[];
   social: SocialLinks;
 }
 
@@ -109,6 +109,52 @@ export interface RelayerUser {
   email: string;
   tags: string;
   social: SocialLinks;
+}
+
+// Tip-related interfaces
+export interface TipData {
+  from: string;
+  to: string;
+  amount: number;
+  message?: string;
+  video_id?: string;
+}
+
+export interface SendTipRequest {
+  tipData: TipData;
+}
+
+export interface SendTipResponse {
+  success: boolean;
+  message: string;
+  transactionHash?: string;
+  fromAddress: string;
+  toAddress: string;
+  amount: number;
+}
+
+export interface TipHistoryResponse {
+  success: boolean;
+  data: {
+    received_tips: TipData[];
+    sent_tips: TipData[];
+  };
+}
+
+export interface TipStatsResponse {
+  success: boolean;
+  data: {
+    total_received: number;
+    total_sent: number;
+  };
+}
+
+export interface TotalTipsResponse {
+  success: boolean;
+  data: {
+    total_received?: number;
+    total_sent?: number;
+  };
 }
 
 class RelayerService {
@@ -187,6 +233,81 @@ class RelayerService {
       return null;
     }
   }
+
+  // Tip APIs
+  async sendTip(tipData: TipData): Promise<SendTipResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: SendTipResponse }>('/api/tips/send', {
+        method: 'POST',
+        body: JSON.stringify(tipData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'sendTip');
+      return null;
+    }
+  }
+
+  async getTipHistory(address: string): Promise<TipHistoryResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: TipHistoryResponse }>(`/api/tips/history/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipHistory');
+      return null;
+    }
+  }
+
+  async getReceivedTips(address: string): Promise<TipData[] | null> {
+    try {
+      const response = await this.request<{ status: string; data: TipData[] }>(`/api/tips/received/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getReceivedTips');
+      return null;
+    }
+  }
+
+  async getSentTips(address: string): Promise<TipData[] | null> {
+    try {
+      const response = await this.request<{ status: string; data: TipData[] }>(`/api/tips/sent/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getSentTips');
+      return null;
+    }
+  }
+
+  async getTotalTipsReceived(address: string): Promise<number | null> {
+    try {
+      const response = await this.request<{ status: string; data: { total_received: number } }>(`/api/tips/total-received/${address}`);
+      return response.data.total_received;
+    } catch (error) {
+      handleError(error, 'getTotalTipsReceived');
+      return null;
+    }
+  }
+
+  async getTotalTipsSent(address: string): Promise<number | null> {
+    try {
+      const response = await this.request<{ status: string; data: { total_sent: number } }>(`/api/tips/total-sent/${address}`);
+      return response.data.total_sent;
+    } catch (error) {
+      handleError(error, 'getTotalTipsSent');
+      return null;
+    }
+  }
+
+  async getTipStats(address: string): Promise<TipStatsResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: TipStatsResponse }>(`/api/tips/stats/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getTipStats');
+      return null;
+    }
+  }
+
   // Health check method
   async healthCheck(): Promise<boolean> {
     try {
