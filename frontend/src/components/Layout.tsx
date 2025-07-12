@@ -1,4 +1,4 @@
-import { ArrowLeftFromLine, ArrowRightFromLine, Spool } from 'lucide-react'
+import { ArrowLeftFromLine, ArrowRightFromLine, Spool, Wallet, UserPen, LogOut } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import {
   DropdownMenu,
@@ -130,22 +130,6 @@ export function Layout({ children }: LayoutProps) {
                     Livestream
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/challenges" className="text-white hover:bg-gray-800 cursor-pointer">
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Challenges
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/nfts" className="text-white hover:bg-gray-800 cursor-pointer">
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
-                    </svg>
-                    NFTs
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-[#232327]" />
                 <DropdownMenuItem asChild>
                   <Link to="/studio" className="text-white hover:bg-gray-800 cursor-pointer">
@@ -202,6 +186,7 @@ export function Layout({ children }: LayoutProps) {
                       <DropdownMenuSeparator className="bg-[#232327]" />
                       <DropdownMenuItem asChild>
                         <Link to="/u/$username" params={{ username: user.username }} className="text-white hover:bg-gray-800 cursor-pointer">
+                          <UserPen className="w-4 h-4" />
                           View Profile
                         </Link>
                       </DropdownMenuItem>
@@ -212,6 +197,7 @@ export function Layout({ children }: LayoutProps) {
                       <DropdownMenuSeparator className="bg-[#232327]" />
                       <DropdownMenuItem asChild>
                         <Link to="/wallet" className="text-white hover:bg-gray-800 cursor-pointer">
+                          <Wallet className="w-4 h-4" />
                           Wallet
                         </Link>
                       </DropdownMenuItem>
@@ -220,8 +206,9 @@ export function Layout({ children }: LayoutProps) {
                   <DropdownMenuSeparator className="bg-[#232327]" />
                   <DropdownMenuItem 
                     onClick={disconnect}
-                    className="text-white hover:bg-gray-800 cursor-pointer"
+                    className="text-white hover:bg-red-500 cursor-pointer"
                   >
+                    <LogOut className="w-4 h-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>

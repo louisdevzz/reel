@@ -1,0 +1,14 @@
+[package]
+name = "reel"
+version = "1.0.0"
+authors = []
+
+[addresses]
+reel = "26a0989735ee42195aa939ccac20c1c28fce87462230adc46666c0685c7c0f81"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

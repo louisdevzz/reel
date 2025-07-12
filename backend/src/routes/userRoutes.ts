@@ -142,6 +142,32 @@ router.get('/:userId/following', async (req, res) => {
   await userController.getFollowing(req, res)
 })
 
+// Balance routes
+// PUT /api/users/:username/balance - Update user balance by username
+router.put('/:username/balance', async (req, res) => {
+  await userController.updateBalanceByUsername(req, res)
+})
+
+// POST /api/users/:username/balance/add - Add to user balance by username
+router.post('/:username/balance/add', async (req, res) => {
+  await userController.addToBalanceByUsername(req, res)
+})
+
+// POST /api/users/:username/balance/subtract - Subtract from user balance by username
+router.post('/:username/balance/subtract', async (req, res) => {
+  await userController.subtractFromBalanceByUsername(req, res)
+})
+
+// GET /api/users/:username/balance - Get user balance by username
+router.get('/:username/balance', async (req, res) => {
+  await userController.getBalanceByUsername(req, res)
+})
+
+// GET /api/users/address/:address/balance - Get user balance by Aptos address
+router.get('/address/:address/balance', async (req, res) => {
+  await userController.getBalanceByAddress(req, res)
+})
+
 // GET /api/users/:userId/follow-stats - Get user's follow statistics
 router.get('/:userId/follow-stats', async (req, res) => {
   await userController.getFollowStats(req, res)

@@ -94,6 +94,21 @@ CREATE TABLE "stream_sessions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "transactions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"amount" integer NOT NULL,
+	"type" text NOT NULL,
+	"tx_hash" text NOT NULL,
+	"timestamp" timestamp DEFAULT now() NOT NULL,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"user_addr" text NOT NULL,
+	"referral_code" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "transactions_tx_hash_unique" UNIQUE("tx_hash")
+);
+--> statement-breakpoint
 CREATE TABLE "user_follows" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"follower_id" uuid NOT NULL,
@@ -121,6 +136,7 @@ CREATE TABLE "users" (
 	"views" integer DEFAULT 0 NOT NULL,
 	"total_donation" integer DEFAULT 0 NOT NULL,
 	"total_donation_count" integer DEFAULT 0 NOT NULL,
+	"balance" integer DEFAULT 0 NOT NULL,
 	"tags" jsonb,
 	"social" jsonb,
 	CONSTRAINT "users_username_unique" UNIQUE("username"),
@@ -196,6 +212,7 @@ ALTER TABLE "short_views" ADD CONSTRAINT "short_views_short_id_shorts_id_fk" FOR
 ALTER TABLE "shorts" ADD CONSTRAINT "shorts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stream_keys" ADD CONSTRAINT "stream_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stream_sessions" ADD CONSTRAINT "stream_sessions_stream_key_id_stream_keys_id_fk" FOREIGN KEY ("stream_key_id") REFERENCES "public"."stream_keys"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_follows" ADD CONSTRAINT "user_follows_follower_id_users_id_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_follows" ADD CONSTRAINT "user_follows_following_id_users_id_fk" FOREIGN KEY ("following_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_comments" ADD CONSTRAINT "video_comments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

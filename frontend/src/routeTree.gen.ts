@@ -24,6 +24,7 @@ import { Route as ShortVideoImport } from "./routes/s/$videoId";
 import { Route as VideoImport } from "./routes/v/$videoId";
 import { Route as WalletImport } from "./routes/wallet";
 import { Route as CallbackImport } from "./routes/callback";
+import { Route as ListTaskImport } from "./routes/tasks";
 
 // Create/Update Routes
 const IndexRoute = IndexImport.update({
@@ -101,6 +102,12 @@ const WalletRoute = WalletImport.update({
 const CallbackRoute = CallbackImport.update({
   id: "/callback",
   path: "/callback",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const ListTaskRoute = ListTaskImport.update({
+  id: "/list_task",
+  path: "/list_task",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -206,6 +213,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof CallbackRoute;
       parentRoute: typeof rootRoute;
     };
+    "/list_task": {
+      id: "/list_task";
+      path: "/list_task";
+      fullPath: "/list_task";
+      preLoaderRoute: typeof ListTaskRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -226,6 +240,7 @@ export interface FileRoutesByFullPath {
   "/v/$videoId": typeof VideoRoute;
   "/wallet": typeof WalletRoute;
   "/callback": typeof CallbackRoute;
+  "/list_task": typeof ListTaskRoute;
 }
 
 export interface FileRoutesByTo {
@@ -243,6 +258,7 @@ export interface FileRoutesByTo {
   "/v/$videoId": typeof VideoRoute;
   "/wallet": typeof WalletRoute;
   "/callback": typeof CallbackRoute;
+  "/list_task": typeof ListTaskRoute;
 }
 
 export interface FileRoutesById {
@@ -261,6 +277,7 @@ export interface FileRoutesById {
   "/v/$videoId": typeof VideoRoute;
   "/wallet": typeof WalletRoute;
   "/callback": typeof CallbackRoute;
+  "/list_task": typeof ListTaskRoute;
 }
 
 export interface FileRouteTypes {
@@ -280,6 +297,7 @@ export interface FileRouteTypes {
     | "/v/$videoId"
     | "/wallet"
     | "/callback"
+    | "/list_task"
   fileRoutesByTo: FileRoutesByTo;
   to: "/" | "/reels" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/studio" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId" | "/wallet" | "/callback";
   id:
@@ -316,6 +334,7 @@ export interface RootRouteChildren {
   VideoRoute: typeof VideoRoute;
   WalletRoute: typeof WalletRoute;
   CallbackRoute: typeof CallbackRoute;
+  ListTaskRoute: typeof ListTaskRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -333,6 +352,7 @@ const rootRouteChildren: RootRouteChildren = {
   VideoRoute: VideoRoute,
   WalletRoute: WalletRoute,
   CallbackRoute: CallbackRoute,
+  ListTaskRoute: ListTaskRoute,
 };
 
 export const routeTree = rootRoute

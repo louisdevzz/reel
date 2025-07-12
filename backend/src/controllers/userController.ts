@@ -915,4 +915,192 @@ export class UserController {
       })
     }
   }
+
+  // Balance methods
+  async updateBalanceByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.params
+      const { balance } = req.body
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is required',
+        })
+      }
+
+      if (typeof balance !== 'number' || balance < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Balance must be a non-negative number',
+        })
+      }
+
+      const updatedUser = await userService.updateBalanceByUsername(username, balance)
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: updatedUser,
+        message: 'Balance updated successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update balance',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async addToBalanceByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.params
+      const { amount } = req.body
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is required',
+        })
+      }
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Amount must be a positive number',
+        })
+      }
+
+      const updatedUser = await userService.addToBalanceByUsername(username, amount)
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: updatedUser,
+        message: 'Balance added successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add to balance',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async subtractFromBalanceByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.params
+      const { amount } = req.body
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is required',
+        })
+      }
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Amount must be a positive number',
+        })
+      }
+
+      const updatedUser = await userService.subtractFromBalanceByUsername(username, amount)
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: updatedUser,
+        message: 'Balance subtracted successfully',
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to subtract from balance',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async getBalanceByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.params
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is required',
+        })
+      }
+
+      const balance = await userService.getBalanceByUsername(username)
+      if (balance === null) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: { username, balance },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get balance',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  async getBalanceByAddress(req: Request, res: Response) {
+    try {
+      const { address } = req.params
+
+      if (!address) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aptos address is required',
+        })
+      }
+
+      const balance = await userService.getBalanceByAddress(address)
+      if (balance === null) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      res.json({
+        success: true,
+        data: { address, balance },
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get balance',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
 } 

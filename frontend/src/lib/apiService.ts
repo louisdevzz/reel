@@ -1,5 +1,14 @@
 const API_BASE_URL = process.env.PUBLIC_API_URL+'/api' || 'http://localhost:3001/api';
 
+// Helper function to handle errors silently or log only in development
+const handleError = (error: any, context: string) => {
+  // Only log errors in development environment
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[${context}]:`, error);
+  }
+  // In production, errors are handled silently
+};
+
 export interface StreamKey {
   id: string;
   key: string;
@@ -93,7 +102,7 @@ class ApiService {
       
       return await response.json();
     } catch (error) {
-      console.error('API request failed:', error);
+      // Silently throw error without logging to console
       throw error;
     }
   }
@@ -104,7 +113,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamKey[] }>('/stream-keys');
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream keys:', error);
+      // Silently return empty array on error
       return [];
     }
   }
@@ -114,7 +123,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/username/${username}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream key by username:', error);
+      handleError(error, 'getStreamKeyByUsername');
       return null;
     }
   }
@@ -124,7 +133,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream key by user ID:', error);
+      handleError(error, 'getStreamKeyByUserId');
       return null;
     }
   }
@@ -134,7 +143,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream key:', error);
+      handleError(error, 'getStreamKey');
       return null;
     }
   }
@@ -144,7 +153,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamKey }>(`/stream-keys/key/${key}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream key by key:', error);
+      handleError(error, 'getStreamKeyByKey');
       return null;
     }
   }
@@ -157,7 +166,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to create stream key:', error);
+      handleError(error, 'createStreamKey');
       return null;
     }
   }
@@ -170,7 +179,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update stream key:', error);
+      handleError(error, 'updateStreamKey');
       return null;
     }
   }
@@ -182,7 +191,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to delete stream key:', error);
+      handleError(error, 'deleteStreamKey');
       return false;
     }
   }
@@ -193,7 +202,7 @@ class ApiService {
         method: 'POST',
       });
     } catch (error) {
-      console.error('Failed to activate stream key:', error);
+      handleError(error, 'activateStreamKey');
       return null;
     }
   }
@@ -204,7 +213,7 @@ class ApiService {
         method: 'POST',
       });
     } catch (error) {
-      console.error('Failed to deactivate stream key:', error);
+      handleError(error, 'deactivateStreamKey');
       return null;
     }
   }
@@ -216,7 +225,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to regenerate stream key:', error);
+      handleError(error, 'regenerateStreamKey');
       return null;
     }
   }
@@ -227,7 +236,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { isActive: boolean; isLive: boolean } }>(`/stream-keys/livepeer/status/${streamId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to check Livepeer stream status:', error);
+      handleError(error, 'checkLivepeerStreamStatus');
       return null;
     }
   }
@@ -243,7 +252,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/livepeer/info/${streamId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get Livepeer stream info:', error);
+      handleError(error, 'getLivepeerStreamInfo');
       return null;
     }
   }
@@ -259,7 +268,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/livepeer/playback/${playbackId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get Livepeer stream info by playback ID:', error);
+      handleError(error, 'getLivepeerStreamInfoByPlaybackId');
       return null;
     }
   }
@@ -278,7 +287,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/${id}/streaming-info`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get streaming info:', error);
+      handleError(error, 'getStreamingInfo');
       return null;
     }
   }
@@ -297,7 +306,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/stream-keys/username/${username}/streaming-info`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get streaming info by username:', error);
+      handleError(error, 'getStreamingInfoByUsername');
       return null;
     }
   }
@@ -310,7 +319,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamSession[] }>('/sessions');
       return response.data;
     } catch (error) {
-      console.error('Failed to get sessions:', error);
+      handleError(error, 'getSessions');
       return [];
     }
   }
@@ -320,7 +329,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamSession[] }>('/sessions/active');
       return response.data;
     } catch (error) {
-      console.error('Failed to get active sessions:', error);
+      handleError(error, 'getActiveSessions');
       return [];
     }
   }
@@ -334,7 +343,7 @@ class ApiService {
       if (error instanceof Error && error.message.includes('404')) {
         return null;
       }
-      console.error('Failed to get live session by stream key:', error);
+      handleError(error, 'getLiveSessionByStreamKey');
       return null;
     }
   }
@@ -344,7 +353,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamSession }>(`/sessions/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get session:', error);
+      handleError(error, 'getSession');
       return null;
     }
   }
@@ -357,7 +366,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to create session:', error);
+      handleError(error, 'createSession');
       return null;
     }
   }
@@ -369,7 +378,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to start stream:', error);
+      handleError(error, 'startStream');
       return null;
     }
   }
@@ -381,7 +390,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to stop stream:', error);
+      handleError(error, 'stopStream');
       return null;
     }
   }
@@ -394,7 +403,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update session:', error);
+      handleError(error, 'updateSession');
       return null;
     }
   }
@@ -407,7 +416,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update viewer count:', error);
+      handleError(error, 'updateViewerCount');
       return null;
     }
   }
@@ -417,7 +426,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: StreamStats }>(`/sessions/${sessionId}/stats`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get stream stats:', error);
+      handleError(error, 'getStreamStats');
       return null;
     }
   }
@@ -430,7 +439,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update stream stats:', error);
+      handleError(error, 'updateStreamStats');
       return null;
     }
   }
@@ -447,7 +456,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { exists: boolean; user: User | null } }>(`/users/check/${aptosAddress}`)
       return response.data
     } catch (error) {
-      console.error('Failed to check user existence:', error)
+      handleError(error, 'checkUserExists')
       return { exists: false, user: null }
     }
   }
@@ -484,7 +493,7 @@ class ApiService {
       })
       return response.data
     } catch (error) {
-      console.error('Failed to create user:', error)
+      handleError(error, 'createUser')
       return null
     }
   }
@@ -494,7 +503,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User }>(`/users/address/${aptosAddress}`)
       return response.data
     } catch (error) {
-      console.error('Failed to get user by Aptos address:', error)
+      handleError(error, 'getUserByAptosAddress')
       return null
     }
   }
@@ -504,7 +513,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User }>(`/users/address/${aptosAddress}`)
       return response.data.id
     } catch (error) {
-      console.error('Failed to get user ID by Aptos address:', error)
+      handleError(error, 'getUserIdByAptosAddress')
       return null
     }
   }
@@ -514,7 +523,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User }>(`/users/username/${username}`)
       return response.data
     } catch (error) {
-      console.error('Failed to get user by username:', error)
+      handleError(error, 'getUserByUsername')
       return null
     }
   }
@@ -527,7 +536,7 @@ class ApiService {
       })
       return response.data
     } catch (error) {
-      console.error('Failed to update user:', error)
+      handleError(error, 'updateUser')
       return null
     }
   }
@@ -537,7 +546,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User[] }>(`/users/top?limit=${limit}`)
       return response.data
     } catch (error) {
-      console.error('Failed to get top users by followers:', error)
+      handleError(error, 'getTopUsersByFollowers')
       return []
     }
   }
@@ -547,7 +556,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: Array<{ name: string; subCategories: string[] }> }>('/users/categories')
       return response.data
     } catch (error) {
-      console.error('Failed to get categories:', error)
+      handleError(error, 'getCategories')
       return []
     }
   }
@@ -558,7 +567,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User[] }>(`/users/search?q=${encodeURIComponent(query)}&limit=${limit}`)
       return response.data
     } catch (error) {
-      console.error('Failed to search users:', error)
+      handleError(error, 'searchUsers')
       return []
     }
   }
@@ -579,7 +588,7 @@ class ApiService {
       }>(`/users/search/suggestions?q=${encodeURIComponent(query)}&limit=${limit}`)
       return response.data
     } catch (error) {
-      console.error('Failed to get search suggestions:', error)
+      handleError(error, 'getSearchSuggestions')
       return {
         users: [],
         categories: [],
@@ -601,7 +610,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User[] }>(`/users/search/category?${params}`)
       return response.data
     } catch (error) {
-      console.error('Failed to search by category:', error)
+      handleError(error, 'searchByCategory')
       return []
     }
   }
@@ -630,7 +639,7 @@ class ApiService {
       
       return await response.json();
     } catch (error) {
-      console.error('Failed to upload video:', error);
+      handleError(error, 'uploadVideo');
       
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -657,7 +666,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>('/videos');
       return response.data;
     } catch (error) {
-      console.error('Failed to get videos:', error);
+      handleError(error, 'getVideos');
       return [];
     }
   }
@@ -667,7 +676,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>('/videos/shorts');
       return response.data;
     } catch (error) {
-      console.error('Failed to get shorts:', error);
+      handleError(error, 'getShorts');
       return [];
     }
   }
@@ -677,7 +686,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/videos/shorts/paginated?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get shorts with pagination:', error);
+      handleError(error, 'getShortsWithPagination');
       return [];
     }
   }
@@ -687,7 +696,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/videos/shorts/around/${videoId}?limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get shorts around video:', error);
+      handleError(error, 'getShortsAroundVideo');
       return [];
     }
   }
@@ -697,7 +706,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/videos/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get videos by user:', error);
+      handleError(error, 'getVideosByUser');
       return [];
     }
   }
@@ -707,7 +716,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/videos/shorts/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get shorts by user:', error);
+      handleError(error, 'getShortsByUser');
       return [];
     }
   }
@@ -717,7 +726,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/videos/shorts/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get short by id:', error);
+      handleError(error, 'getShortById');
       return null;
     }
   }
@@ -738,7 +747,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to track view:', error);
+      handleError(error, 'trackView');
       return null;
     }
   }
@@ -754,7 +763,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to update view:', error);
+      handleError(error, 'updateView');
       return false;
     }
   }
@@ -764,7 +773,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/views/${contentType}/${contentId}/stats`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get view stats:', error);
+      handleError(error, 'getViewStats');
       return null;
     }
   }
@@ -774,7 +783,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/views/user/${userId}/history?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user view history:', error);
+      handleError(error, 'getUserViewHistory');
       return [];
     }
   }
@@ -788,7 +797,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add video like:', error);
+      handleError(error, 'addVideoLike');
       return null;
     }
   }
@@ -801,7 +810,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to remove video like:', error);
+      handleError(error, 'removeVideoLike');
       return false;
     }
   }
@@ -811,7 +820,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/likes/videos?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user video likes:', error);
+      handleError(error, 'getUserVideoLikes');
       return [];
     }
   }
@@ -821,7 +830,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { isLiked: boolean } }>(`/users/likes/videos/check?userId=${userId}&videoId=${videoId}`);
       return response.data.isLiked;
     } catch (error) {
-      console.error('Failed to check if video is liked:', error);
+      handleError(error, 'isVideoLiked');
       return false;
     }
   }
@@ -834,7 +843,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add short like:', error);
+      handleError(error, 'addShortLike');
       // Re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -848,7 +857,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to remove short like:', error);
+      handleError(error, 'removeShortLike');
       // Re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -859,7 +868,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/likes/shorts?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user short likes:', error);
+      handleError(error, 'getUserShortLikes');
       return [];
     }
   }
@@ -869,7 +878,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { isLiked: boolean } }>(`/users/likes/shorts/check?userId=${userId}&shortId=${shortId}`);
       return response.data.isLiked;
     } catch (error) {
-      console.error('Failed to check if short is liked:', error);
+      handleError(error, 'isShortLiked');
       return false;
     }
   }
@@ -883,7 +892,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add video comment:', error);
+      handleError(error, 'addVideoComment');
       return null;
     }
   }
@@ -896,7 +905,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to remove video comment:', error);
+      handleError(error, 'removeVideoComment');
       return false;
     }
   }
@@ -906,7 +915,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/comments/videos/${videoId}?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get video comments:', error);
+      handleError(error, 'getVideoComments');
       return [];
     }
   }
@@ -919,7 +928,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update video comment:', error);
+      handleError(error, 'updateVideoComment');
       return null;
     }
   }
@@ -932,7 +941,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add short comment:', error);
+      handleError(error, 'addShortComment');
       // Re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -946,7 +955,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to remove short comment:', error);
+      handleError(error, 'removeShortComment');
       return false;
     }
   }
@@ -956,7 +965,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/comments/shorts/${shortId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get short comments:', error);
+      handleError(error, 'getShortComments');
       return [];
     }
   }
@@ -969,7 +978,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to update short comment:', error);
+      handleError(error, 'updateShortComment');
       return null;
     }
   }
@@ -983,7 +992,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add video share:', error);
+      handleError(error, 'addVideoShare');
       return null;
     }
   }
@@ -993,7 +1002,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/shares/videos/${videoId}?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get video shares:', error);
+      handleError(error, 'getVideoShares');
       return [];
     }
   }
@@ -1003,7 +1012,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/shares/videos/${videoId}/stats`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get video share stats:', error);
+      handleError(error, 'getVideoShareStats');
       return null;
     }
   }
@@ -1013,7 +1022,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/shares/user/${userId}/videos?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user video shares:', error);
+      handleError(error, 'getUserVideoShares');
       return [];
     }
   }
@@ -1026,7 +1035,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add short share:', error);
+      handleError(error, 'addShortShare');
       return null;
     }
   }
@@ -1036,7 +1045,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/shares/shorts/${shortId}?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get short shares:', error);
+      handleError(error, 'getShortShares');
       return [];
     }
   }
@@ -1046,7 +1055,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/shares/shorts/${shortId}/stats`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get short share stats:', error);
+      handleError(error, 'getShortShareStats');
       return null;
     }
   }
@@ -1056,7 +1065,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/shares/user/${userId}/short?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user short shares:', error);
+      handleError(error, 'getUserShortShares');
       return [];
     }
   }
@@ -1070,7 +1079,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to add short bookmark:', error);
+      handleError(error, 'addShortBookmark');
       // Re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -1084,7 +1093,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to remove short bookmark:', error);
+      handleError(error, 'removeShortBookmark');
       // Re-throw the error so the frontend can handle it properly
       throw error;
     }
@@ -1095,7 +1104,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any[] }>(`/users/${userId}/bookmarks/shorts?limit=${limit}&offset=${offset}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user short bookmarks:', error);
+      handleError(error, 'getUserShortBookmarks');
       return [];
     }
   }
@@ -1105,7 +1114,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { isBookmarked: boolean } }>(`/users/bookmarks/shorts/check?userId=${userId}&shortId=${shortId}`);
       return response.data.isBookmarked;
     } catch (error) {
-      console.error('Failed to check if short is bookmarked:', error);
+      handleError(error, 'isShortBookmarked');
       return false;
     }
   }
@@ -1116,7 +1125,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/analytics/${contentType}/${contentId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get content analytics:', error);
+      handleError(error, 'getContentAnalytics');
       return null;
     }
   }
@@ -1126,7 +1135,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: any }>(`/analytics/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Failed to get user analytics:', error);
+      handleError(error, 'getUserAnalytics');
       return null;
     }
   }
@@ -1147,7 +1156,7 @@ class ApiService {
         return data.ip || 'unknown';
       }
     } catch (error) {
-      console.error('Error getting client IP from backend:', error);
+      handleError(error, 'getClientIP');
     }
     
     // Fallback: return unknown since we can't reliably get IP from frontend
@@ -1187,7 +1196,7 @@ class ApiService {
           throw new Error(`Unknown engagement action: ${action}`);
       }
     } catch (error) {
-      console.error(`Failed to track ${action}:`, error);
+      handleError(error, `trackEngagement-${action}`);
       return null;
     }
   }
@@ -1218,7 +1227,7 @@ class ApiService {
           throw new Error(`Unknown engagement action: ${action}`);
       }
     } catch (error) {
-      console.error(`Failed to remove ${action}:`, error);
+      handleError(error, `removeEngagement-${action}`);
       return false;
     }
   }
@@ -1242,7 +1251,7 @@ class ApiService {
           return false;
       }
     } catch (error) {
-      console.error(`Failed to check ${action} status:`, error);
+      handleError(error, `checkEngagementStatus-${action}`);
       return false;
     }
   }
@@ -1256,7 +1265,7 @@ class ApiService {
       })
       return response.data
     } catch (error) {
-      console.error('Failed to follow user:', error)
+      handleError(error, 'followUser')
       // Re-throw the error so the frontend can handle it properly
       throw error
     }
@@ -1270,7 +1279,7 @@ class ApiService {
       })
       return true
     } catch (error) {
-      console.error('Failed to unfollow user:', error)
+      handleError(error, 'unfollowUser')
       // Re-throw the error so the frontend can handle it properly
       throw error
     }
@@ -1281,7 +1290,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { isFollowing: boolean } }>(`/users/follow/check?followerId=${followerId}&followingId=${followingId}`)
       return response.data.isFollowing
     } catch (error) {
-      console.error('Failed to check if following:', error)
+      handleError(error, 'isFollowing')
       return false
     }
   }
@@ -1291,7 +1300,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User[] }>(`/users/${userId}/followers`)
       return response.data
     } catch (error) {
-      console.error('Failed to get followers:', error)
+      handleError(error, 'getFollowers')
       return []
     }
   }
@@ -1301,7 +1310,7 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: User[] }>(`/users/${userId}/following`)
       return response.data
     } catch (error) {
-      console.error('Failed to get following:', error)
+      handleError(error, 'getFollowing')
       return []
     }
   }
@@ -1311,8 +1320,19 @@ class ApiService {
       const response = await this.request<{ success: boolean; data: { followers: number; following: number } }>(`/users/${userId}/follow-stats`)
       return response.data
     } catch (error) {
-      console.error('Failed to get follow stats:', error)
+      handleError(error, 'getFollowStats')
       return { followers: 0, following: 0 }
+    }
+  }
+
+  // Get user balance by Aptos address
+  async getUserBalanceByAddress(aptosAddress: string): Promise<number | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: { address: string; balance: number } }>(`/users/address/${aptosAddress}/balance`)
+      return response.data.balance
+    } catch (error) {
+      handleError(error, 'getUserBalanceByAddress')
+      return null
     }
   }
 
@@ -1324,7 +1344,7 @@ class ApiService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to clear chat messages:', error);
+      handleError(error, 'clearChatMessages');
       return false;
     }
   }
@@ -1333,6 +1353,82 @@ class ApiService {
   async getUserByAccount(account: string): Promise<User | null> {
     // For now, treat account as aptosAddress
     return this.getUserByAptosAddress(account);
+  }
+
+  // ===== DEPOSIT TRANSACTION APIs =====
+
+  // Get user's deposit transactions
+  async getUserDepositTransactions(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/deposits/user/${userId}?limit=${limit}&offset=${offset}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getUserDepositTransactions');
+      return [];
+    }
+  }
+
+  // Get user's deposit statistics
+  async getUserDepositStats(userId: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/deposits/user/${userId}/stats`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getUserDepositStats');
+      return null;
+    }
+  }
+
+  // Get deposit transaction by ID
+  async getDepositTransactionById(id: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/deposits/${id}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getDepositTransactionById');
+      return null;
+    }
+  }
+
+  // Get deposit transaction by transaction hash
+  async getDepositTransactionByTxHash(txHash: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/deposits/hash/${txHash}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getDepositTransactionByTxHash');
+      return null;
+    }
+  }
+
+  // Get all deposit transactions (admin only)
+  async getAllDepositTransactions(limit: number = 20, offset: number = 0, status?: string): Promise<any[]> {
+    try {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString()
+      });
+      if (status) {
+        params.append('status', status);
+      }
+      
+      const response = await this.request<{ success: boolean; data: any[] }>(`/deposits?${params}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllDepositTransactions');
+      return [];
+    }
+  }
+
+  // Get pending transactions (admin only)
+  async getPendingTransactions(): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>('/deposits/pending/all');
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPendingTransactions');
+      return [];
+    }
   }
 }
 

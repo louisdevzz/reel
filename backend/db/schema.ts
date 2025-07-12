@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   views: integer('views').notNull().default(0),
   totalDonation: integer('total_donation').notNull().default(0),
   totalDonationCount: integer('total_donation_count').notNull().default(0),
+  balance: integer('balance').notNull().default(0),
   tags: jsonb('tags').$type<string[]>(),
   social: jsonb('social').$type<{
     youtube?: string
@@ -204,6 +205,21 @@ export const streamSessions = pgTable('stream_sessions', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// transactions table
+export const transactions = pgTable('transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  amount: integer('amount').notNull(),
+  type: text('type').notNull(), // 'deposit' | 'withdraw' | 'transfer' | 'reward' | 'fee' | 'other'
+  txHash: text('tx_hash').notNull().unique(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'confirmed' | 'failed'
+  userAddr: text('user_addr').notNull(),
+  referralCode: text('referral_code'), // optional
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Video = typeof videos.$inferSelect
@@ -233,4 +249,6 @@ export type NewUserFollow = typeof userFollows.$inferInsert
 export type StreamKey = typeof streamKeys.$inferSelect
 export type NewStreamKey = typeof streamKeys.$inferInsert
 export type StreamSession = typeof streamSessions.$inferSelect
-export type NewStreamSession = typeof streamSessions.$inferInsert 
+export type NewStreamSession = typeof streamSessions.$inferInsert
+export type Transaction = typeof transactions.$inferSelect
+export type NewTransaction = typeof transactions.$inferInsert 

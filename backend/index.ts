@@ -10,6 +10,7 @@ import commentRoutes from "./src/routes/commentRoutes";
 import shareRoutes from "./src/routes/shareRoutes";
 import analyticsRoutes from "./src/routes/analyticsRoutes";
 import chatRoutes from "./src/routes/chatRoutes";
+import transactionsRoutes from "./src/routes/transactionsRoutes";
 import { websocketService } from "./src/services/websocketService";
 import { redisService } from "./src/services/redisService";
 import { workerService } from "./src/services/workerService";
@@ -38,6 +39,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/shares', shareRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/transactions', transactionsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

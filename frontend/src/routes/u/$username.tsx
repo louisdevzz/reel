@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { FaTwitch, FaTwitter, FaTiktok, FaYoutube, FaCheckCircle, FaEnvelope, FaGlobe, FaUserFriends, FaPlay, FaChartLine } from "react-icons/fa";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Info, User2, Copy } from "lucide-react";
@@ -13,6 +13,7 @@ export const Route = createFileRoute('/u/$username')({
 
 function ProfilePage() {
     const { username } = Route.useParams();
+    const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [user, setUser] = useState<User | null>(null);
@@ -50,7 +51,7 @@ function ProfilePage() {
                 if (userData) {
                     setUser(userData);
                 } else {
-                    setError('User not found');
+                    navigate({ to: '/' });
                 }
             } catch (err) {
                 setError('Failed to load user data');
@@ -175,7 +176,6 @@ function ProfilePage() {
         return (
             <div className="bg-[#18181b] min-h-screen text-white flex items-center justify-center">
                 <div className="text-center">
-                    <div className="text-red-400 text-6xl mb-4">⚠️</div>
                     <h1 className="text-2xl font-bold mb-2">User Not Found</h1>
                     <p className="text-[#a1a1aa]">{error || `User @${username} does not exist`}</p>
                 </div>

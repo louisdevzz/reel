@@ -211,6 +211,78 @@ class UserService {
     }
   }
 
+  // Balance methods
+  async updateBalanceByUsername(username: string, newBalance: number): Promise<User | null> {
+    try {
+      const result = await db.update(users)
+        .set({ balance: newBalance })
+        .where(eq(users.username, username))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error updating balance by username:', error)
+      return null
+    }
+  }
+
+  async addToBalanceByUsername(username: string, amount: number): Promise<User | null> {
+    try {
+      const user = await this.getUserByUsername(username)
+      if (!user) return null
+
+      const result = await db.update(users)
+        .set({ balance: user.balance + amount })
+        .where(eq(users.username, username))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error adding to balance by username:', error)
+      return null
+    }
+  }
+
+  async subtractFromBalanceByUsername(username: string, amount: number): Promise<User | null> {
+    try {
+      const user = await this.getUserByUsername(username)
+      if (!user) return null
+
+      // Prevent negative balance
+      const newBalance = Math.max(0, user.balance - amount)
+
+      const result = await db.update(users)
+        .set({ balance: newBalance })
+        .where(eq(users.username, username))
+        .returning()
+      
+      return result[0] || null
+    } catch (error) {
+      console.error('Error subtracting from balance by username:', error)
+      return null
+    }
+  }
+
+  async getBalanceByUsername(username: string): Promise<number | null> {
+    try {
+      const user = await this.getUserByUsername(username)
+      return user ? user.balance : null
+    } catch (error) {
+      console.error('Error getting balance by username:', error)
+      return null
+    }
+  }
+
+  async getBalanceByAddress(aptosAddress: string): Promise<number | null> {
+    try {
+      const user = await this.getUserByAptosAddress(aptosAddress)
+      return user ? user.balance : null
+    } catch (error) {
+      console.error('Error getting balance by address:', error)
+      return null
+    }
+  }
+
   async getTopUsersByFollowers(limit: number = 10): Promise<User[]> {
     try {
       const result = await db.select()

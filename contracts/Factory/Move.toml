@@ -1,0 +1,16 @@
+[package]
+name = "factory"
+version = "1.0.0"
+authors = []
+
+[addresses]
+factory = "d8ac4ac9cb7b1aab12850a6b2f3247b53725f3a71c44161ec42e38772d62dc2a"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

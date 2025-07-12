@@ -360,8 +360,8 @@ function HomePage() {
                 {user?.username || video.creator || 'Unknown User'}
               </div>
             </div>
-            {video.description && (
-              <div className="text-sm tex-gray-300 mb-2 line-clamp-2">{video.description.length > 20 ? video.description.slice(0, 20) + '...' : video.description}</div>
+            {(video.description || video.title) && (
+              <div className="text-sm tex-gray-300 mb-2 line-clamp-2">{video.description ? video.description.length > 20 ? video.description.slice(0, 20) + '...' : video.description : video.title.length > 20 ? video.title.slice(0, 20) + '...' : video.title}</div>
             )}
             {video.tags && video.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -396,8 +396,8 @@ function HomePage() {
         </div>
         <div className="p-4">
           <div className="font-semibold text-white mb-2 line-clamp-2">{video.title}</div>
-          {video.description && (
-            <div className="text-sm text-gray-400 mb-2 line-clamp-2">{video.description}</div>
+          {(video.description || video.title) && (
+              <div className="text-sm tex-gray-300 mb-2 line-clamp-2">{video.description ? video.description.length > 20 ? video.description.slice(0, 20) + '...' : video.description : video.title.length > 20 ? video.title.slice(0, 20) + '...' : video.title}</div>
           )}
           {video.tags && video.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
