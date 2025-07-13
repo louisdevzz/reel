@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Spool, Loader2 } from "lucide-react";
 import { apiService } from "../lib/apiService";
 import { relayerService } from "../lib/relayerService";
+import { ChatService } from "../lib/streamService";
 import { useUser } from "../contexts/userContext";
 import { toast } from "react-hot-toast";
 
@@ -34,9 +35,11 @@ interface TipModalProps {
   onOpenChange: (v: boolean) => void;
   receiverId?: string;
   receiverAddress?: string;
+  receiverName?: string; // Add receiverName prop for tip notifications
   tipType?: 'general' | 'stream' | 'video' | 'short';
   contentId?: string;
   message?: string;
+  streamKey?: string; // Add streamKey prop for live stream tips
 }
 
 /**
@@ -50,8 +53,10 @@ interface TipModalProps {
  *   onOpenChange={setIsTipModalOpen}
  *   receiverId={user?.id}
  *   receiverAddress={user?.aptosAddress}
+ *   receiverName={user?.username}
  *   tipType="stream"
  *   contentId={session?.id}
+ *   streamKey={streamKey}
  * />
  * 
  * // For videos
@@ -60,6 +65,7 @@ interface TipModalProps {
  *   onOpenChange={setIsTipModalOpen}
  *   receiverId={video?.creatorId}
  *   receiverAddress={video?.creatorAddress}
+ *   receiverName={video?.creatorName}
  *   tipType="video"
  *   contentId={video?.id}
  * />
@@ -70,6 +76,7 @@ interface TipModalProps {
  *   onOpenChange={setIsTipModalOpen}
  *   receiverId={short?.creatorId}
  *   receiverAddress={short?.creatorAddress}
+ *   receiverName={short?.creatorName}
  *   tipType="short"
  *   contentId={short?.id}
  * />
@@ -80,6 +87,7 @@ interface TipModalProps {
  *   onOpenChange={setIsTipModalOpen}
  *   receiverId={user?.id}
  *   receiverAddress={user?.aptosAddress}
+ *   receiverName={user?.username}
  *   tipType="general"
  * />
  */
@@ -89,14 +97,26 @@ export function TipModal({
   onOpenChange, 
   receiverId, 
   receiverAddress,
+  receiverName,
   tipType = 'general',
   contentId,
-  message = ''
+  message = '',
+  streamKey
 }: TipModalProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [isTipping, setIsTipping] = useState(false);
   const [customMessage, setCustomMessage] = useState(message);
   const { currentUser, account, refetchCurrentUser } = useUser();
+  
+  // Create a separate chat service instance for tip notifications
+  const tipChatService = new ChatService();
+
+  // Cleanup tip chat service on unmount
+  useEffect(() => {
+    return () => {
+      tipChatService.disconnect();
+    };
+  }, []);
 
   const handleTip = async () => {
     if (selected === null || !currentUser || !receiverId || !receiverAddress || !account) {
@@ -163,6 +183,35 @@ export function TipModal({
       setSelected(null);
       setCustomMessage('');
 
+      // Send tip notification to stream if applicable
+      if (streamKey && tipType === 'stream') {
+        console.log('Sending tip notification to stream');
+
+        // Set up connection event handlers
+        tipChatService.onConnect(() => {
+          
+          tipChatService.sendTipNotification(
+            currentUser.username || 'Anonymous',
+            receiverName || 'Streamer',
+            gift.name,
+            gift.icon,
+            tipAmount,
+            customMessage
+          );
+          
+          // Disconnect after sending notification
+          setTimeout(() => {
+            tipChatService.disconnect();
+          }, 2000); // Increased delay to ensure message is fully processed
+        });
+        
+        tipChatService.onDisconnect(() => {
+          console.log('Tip chat service disconnected');
+        });
+        
+        tipChatService.connect(streamKey);
+      }
+
     } catch (error) {
       console.error('Tip error:', error);
       toast.error(error instanceof Error ? error.message : "Failed to send tip");
@@ -176,6 +225,8 @@ export function TipModal({
       onOpenChange(false);
       setSelected(null);
       setCustomMessage('');
+      // Cleanup tip chat service
+      tipChatService.disconnect();
     }
   };
 

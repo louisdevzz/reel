@@ -233,12 +233,15 @@ function LiveDetailsPage() {
                                         {isCheckingFollow ? '...' : (isFollowing ? 'Following' : 'Follow')}
                                     </button>
                                 )}
-                                <button 
-                                    className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]"
-                                    onClick={() => setIsTipModalOpen(true)}
-                                >
-                                    Tip Now
-                                </button>
+                                {/* Only show tip button if current user is not viewing their own stream */}
+                                {currentUser && currentUser.username !== username && (
+                                    <button 
+                                        className="bg-[#232327] hover:bg-[#18181b] px-5 py-2 rounded-full font-bold text-white text-sm border border-[#2f2f35]"
+                                        onClick={() => setIsTipModalOpen(true)}
+                                    >
+                                        Tip Now
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="font-semibold text-lg text-white">
@@ -331,8 +334,10 @@ function LiveDetailsPage() {
           onOpenChange={setIsTipModalOpen}
           receiverId={user?.id}
           receiverAddress={user?.aptosAddress}
+          receiverName={user?.username}
           tipType="stream"
           contentId={session?.stream_sessions?.id || session?.id}
+          streamKey={streamKey}
         />
         </>
     );

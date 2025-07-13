@@ -73,7 +73,22 @@ export function ChatSection({ streamKey }: ChatSectionProps) {
         if (data.type === 'chat_message') {
           setMessages(prev => [...prev, data.message]);
         } else if (data.type === 'recent_messages') {
-          setMessages(data.messages || []);
+          const messages = data.messages || [];
+          setMessages(messages);
+        } else if (data.type === 'tip_notification') {
+          // Handle tip notification - create a special message object
+          const tipMessage: ChatMessage = {
+            id: `tip-${Date.now()}-${Math.random()}`,
+            streamKey: streamKey,
+            username: '🎉 Tip Notification',
+            message: data.message,
+            timestamp: Date.now(),
+            userId: 'system'
+          };
+          setMessages(prev => {
+            const newMessages = [...prev, tipMessage];
+            return newMessages;
+          });
         }
       });
 
@@ -152,36 +167,46 @@ export function ChatSection({ streamKey }: ChatSectionProps) {
             <p className="text-xs mt-1">Be the first to say something!</p>
           </div>
         ) : (
-          messages.map((message) => (
-            <div key={message.id} className="flex items-start gap-3">
-              {/* Avatar */}
-              <div className="flex-shrink-0">
-                <img
-                  src={message.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM5MTQ3ZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8cGF0aCBkPSJNMTIgMTJhNS41IDUuNSAwIDEgMCAwLTExIDUuNSA1LjUgMCAwIDAgMCAxMXptMCAyYy0zLjMzIDAtMTAgMS42Ny0xMCA1djNoMjB2LTNjMC0zLjMzLTYuNjctNS0xMC01eiIvPgo8L3N2Zz4KPC9zdmc+'}
-                  alt={message.username}
-                  className="w-8 h-8 rounded-full border border-[#2f2f35]"
-                  onError={(e) => {
-                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM5MTQ3ZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8cGF0aCBkPSJNMTIgMTJhNS41IDUuNSAwIDEgMCAwLTExIDUuNSA1LjUgMCAwIDAgMCAxMXptMCAyYy0zLjMzIDAtMTAgMS42Ny0xMCA1djNoMjB2LTNjMC0zLjMzLTYuNjctNS0xMC01eiIvPgo8L3N2Zz4KPC9zdmc+';
-                  }}
-                />
-              </div>
-              
-              {/* Message Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-[#9147ff] text-sm">
-                    {message.username}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    {formatTime(message.timestamp)}
-                  </span>
+          messages.map((message) => {
+            // Check if this is a tip notification (from both real-time and recent messages)
+            const isTipNotification = message.userId === 'system' && message.username === '🎉 Tip Notification';
+            return (
+              <div key={message.id} className={`flex items-start gap-3 ${isTipNotification ? 'animate-pulse' : ''}`}>
+                {/* Avatar */}
+                <div className="flex-shrink-0">
+                  {isTipNotification ? (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
+                      <span className="text-white text-sm">🎁</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={message.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM5MTQ3ZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8cGF0aCBkPSJNMTIgMTJhNS41IDUuNSAwIDEgMCAwLTExIDUuNSA1LjUgMCAwIDAgMCAxMXptMCAyYy0zLjMzIDAtMTAgMS42Ny0xMCA1djNoMjB2LTNjMC0zLjMzLTYuNjctNS0xMC01eiIvPgo8L3N2Zz4KPC9zdmc+'}
+                      alt={message.username}
+                      className="w-8 h-8 rounded-full border border-[#2f2f35]"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM5MTQ3ZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8cGF0aCBkPSJNMTIgMTJhNS41IDUuNSAwIDEgMCAwLTExIDUuNSA1LjUgMCAwIDAgMCAxMXptMCAyYy0zLjMzIDAtMTAgMS42Ny0xMCA1djNoMjB2LTNjMC0zLjMzLTYuNjctNS0xMC01eiIvPgo8L3N2Zz4KPC9zdmc+';
+                      }}
+                    />
+                  )}
                 </div>
-                <div className="text-white text-sm break-words">
-                  {message.message}
+                
+                {/* Message Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`font-bold text-sm ${isTipNotification ? 'text-yellow-400' : 'text-[#9147ff]'}`}>
+                      {message.username}
+                    </span>
+                    <span className="text-gray-500 text-xs">
+                      {formatTime(message.timestamp)}
+                    </span>
+                  </div>
+                  <div className={`text-sm break-words ${isTipNotification ? 'text-yellow-100 bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-500/30' : 'text-white'}`}>
+                    {message.message}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

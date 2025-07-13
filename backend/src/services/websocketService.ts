@@ -140,6 +140,8 @@ class WebSocketService {
         const data = JSON.parse(event.data.toString());
         if (data.type === 'chat_message' && data.message) {
           await this.handleChatMessage(client, data.message);
+        } else if (data.type === 'tip_notification') {
+          await this.handleTipNotification(client, data);
         }
       } catch (error) {
         console.error('[WebSocketService] Error handling chat message:', error);
@@ -185,9 +187,54 @@ class WebSocketService {
     });
   }
 
+  private async handleTipNotification(client: ChatClient, data: any) {
+    // Create tip notification message to store in Redis
+    const tipMessage = {
+      id: `tip-${Date.now()}-${Math.random()}`,
+      streamKey: client.streamKey,
+      username: '🎉 Tip Notification',
+      message: data.message,
+      timestamp: Date.now(),
+      userId: 'system',
+      tipData: {
+        tipperName: data.tipperName,
+        receiverName: data.receiverName,
+        giftName: data.giftName,
+        giftIcon: data.giftIcon,
+        amount: data.amount,
+        customMessage: data.customMessage
+      }
+    };
+    
+    // Store tip notification in Redis like a regular chat message
+    await chatService.addMessage(
+      client.streamKey,
+      tipMessage.username,
+      tipMessage.message,
+      undefined,
+      tipMessage.userId
+    );
+    
+    // Broadcast tip notification to all clients in the same stream
+    const notificationData = {
+      type: 'tip_notification',
+      message: data.message,
+      tipperName: data.tipperName,
+      receiverName: data.receiverName,
+      giftName: data.giftName,
+      giftIcon: data.giftIcon,
+      amount: data.amount,
+      customMessage: data.customMessage
+    };
+    
+    console.log('[WebSocketService] Broadcasting tip notification:', notificationData);
+    this.broadcastChatMessage(client.streamKey, notificationData);
+  }
+
   private async sendRecentMessages(client: ChatClient) {
     try {
       const messages = await chatService.getMessages(client.streamKey, 50);
+
       if (client.ws.readyState === 1) {
         client.ws.send(JSON.stringify({
           type: 'recent_messages',
@@ -202,8 +249,8 @@ class WebSocketService {
   private broadcastChatMessage(streamKey: string, data: any) {
     const clients = this.chatClients.get(streamKey) || [];
     const message = JSON.stringify(data);
-
-    clients.forEach(client => {
+    
+    clients.forEach((client, index) => {
       if (client.ws.readyState === 1) {
         client.ws.send(message);
       }

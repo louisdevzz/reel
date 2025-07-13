@@ -247,6 +247,28 @@ export class ChatService {
     }
   }
 
+  // Send tip notification to chat
+  sendTipNotification(tipperName: string, receiverName: string, giftName: string, giftIcon: string, amount: number, message?: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const tipMessage = message 
+        ? `🎉 ${tipperName} sent ${giftIcon} ${giftName} : ${message}`
+        : `🎉 ${tipperName} sent ${giftIcon} ${giftName}`;
+      
+      this.ws.send(JSON.stringify({
+        type: 'tip_notification',
+        message: tipMessage,
+        tipperName,
+        receiverName,
+        giftName,
+        giftIcon,
+        amount,
+        customMessage: message
+      }));
+    } else {
+      console.error('WebSocket is not connected');
+    }
+  }
+
   onMessage(callback: (message: any) => void) {
     this.onMessageCallback = callback;
   }
