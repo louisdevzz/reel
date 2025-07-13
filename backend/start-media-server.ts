@@ -114,8 +114,6 @@ async function startLivepeerService() {
     
     console.log(`🚀 Livepeer Service is running and monitoring streams`);
     console.log(`📡 RTMP URL: rtmp://rtmp.livepeer.com/live`);
-    console.log(`🌐 WebRTC URL: https://playback.livepeer.studio/webrtc/{streamKey}`);
-    
     // Keep the process running
     setInterval(() => {
       // Heartbeat to keep the service alive

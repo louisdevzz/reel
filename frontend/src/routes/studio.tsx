@@ -2,14 +2,15 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { apiService } from '../lib/apiService'
 import { useUser } from '../contexts/userContext'
-import { Upload, MoreVertical, Edit, Trash2, Copy, ExternalLink } from 'lucide-react'
+import { Upload, MoreVertical, Edit, Trash2, Copy, ExternalLink, AlertTriangle } from 'lucide-react'
 import {
   Dialog,
   DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter
 } from '../components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import {
@@ -35,6 +36,25 @@ const generateRandomFilename = (originalName: string): string => {
   return `${result}-${timestamp}.${extension}`
 }
 
+const getVideoDuration = (file: File): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src)
+      resolve(video.duration)
+    }
+    
+    video.onerror = () => {
+      window.URL.revokeObjectURL(video.src)
+      reject(new Error('Failed to load video metadata'))
+    }
+    
+    video.src = URL.createObjectURL(file)
+  })
+}
+
 function StudioPage() {
   const [video, setVideo] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -46,6 +66,9 @@ function StudioPage() {
   const [videos, setVideos] = useState<any[]>([])
   const [shorts, setShorts] = useState<any[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'video' | 'short'; title: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { isConnected, currentUser } = useUser()
 
   useEffect(() => {
@@ -113,16 +136,46 @@ function StudioPage() {
   }
 
   const handleDeleteVideo = async (videoId: string, type: 'video' | 'short') => {
-    if (confirm(`Are you sure you want to delete this ${type}?`)) {
-      try {
-        // TODO: Implement delete API call
-        toast.success(`${type} deleted successfully!`)
+    if (!currentUser) {
+      toast.error('User not found')
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      let success = false
+      
+      if (type === 'video') {
+        success = await apiService.deleteVideo(videoId, currentUser.id)
+      } else {
+        success = await apiService.deleteShort(videoId, currentUser.id)
+      }
+
+      if (success) {
+        toast.success(`Deleted successfully!`)
         await fetchUserVideos()
         await fetchUserShorts()
-      } catch (error) {
+      } else {
         toast.error(`Failed to delete ${type}`)
       }
+    } catch (error) {
+      toast.error(`Failed to delete ${type}`)
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const openDeleteDialog = (videoId: string, type: 'video' | 'short', title: string) => {
+    setItemToDelete({ id: videoId, type, title })
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!itemToDelete || !currentUser) return
+    
+    await handleDeleteVideo(itemToDelete.id, itemToDelete.type)
+    setDeleteDialogOpen(false)
+    setItemToDelete(null)
   }
 
   const handleEditVideo = (videoId: string, type: 'video' | 'short') => {
@@ -148,6 +201,8 @@ function StudioPage() {
       toast.error('Upload timeout! Please try again or check your network connection.')
     }, 1800000)
     try {
+      // Get video duration
+      const duration = await getVideoDuration(video)
       const newFilename = generateRandomFilename(video.name)
       const renamedVideo = new File([video], newFilename, {
         type: video.type,
@@ -159,8 +214,9 @@ function StudioPage() {
       formData.append('description', description)
       formData.append('userId', currentUser.id)
       formData.append('isPublic', 'true')
+      formData.append('duration', duration.toFixed(0))
       setUploadStatus('Uploading to R2...')
-      setUploadProgress(25)
+      setUploadProgress(50)
       const response = await apiService.uploadVideo(formData)
       clearTimeout(uploadTimeout)
       if (response.success) {
@@ -343,8 +399,8 @@ function StudioPage() {
                         </td>
                         <td className="border-b border-gray-700 px-3 py-2 max-w-[220px] bg-[#18181b]">
                           <Link to="/v/$videoId" params={{ videoId: v.id }} className="block">
-                            <div className="font-semibold text-white truncate">{v.title}</div>
-                            <div className="text-gray-400 text-xs truncate">{v.description}</div>
+                            <div className="font-semibold text-white truncate">{v.title.length > 100 ? v.title.slice(0, 100)+"..." : v.title}</div>
+                            <div className="text-gray-400 text-xs truncate">{v.description.length > 100 ? v.description.slice(0, 100)+"..." : v.description}</div>
                           </Link>
                         </td>
                         <td className="border-b border-gray-700 px-3 py-2 bg-[#18181b] text-gray-200">Public</td>
@@ -384,7 +440,7 @@ function StudioPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-red-400 hover:bg-red-900/20 cursor-pointer"
-                                onClick={() => handleDeleteVideo(v.id, 'video')}
+                                onClick={() => openDeleteDialog(v.id, 'video', v.title)}
                               >
                                 <Trash2 size={14} className="mr-2" />
                                 Delete
@@ -476,7 +532,7 @@ function StudioPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-red-400 hover:bg-red-900/20 cursor-pointer"
-                                onClick={() => handleDeleteVideo(s.id, 'short')}
+                                onClick={() => openDeleteDialog(s.id, 'short', s.title)}
                               >
                                 <Trash2 size={14} className="mr-2" />
                                 Delete
@@ -493,6 +549,50 @@ function StudioPage() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="md:min-w-[400px] bg-[#18181b] border border-gray-700">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold text-white">Delete {itemToDelete?.type}</DialogTitle>
+            <DialogDescription className="text-gray-300 mt-2">
+              Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 mt-6">
+            <button
+              className="px-4 py-2 text-sm font-medium bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                setDeleteDialogOpen(false)
+                setItemToDelete(null)
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={16} />
+                  Delete
+                </>
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

@@ -322,7 +322,7 @@ function HomePage() {
         className="block"
       >
         <div
-          className="bg-[#18181b] min-h-[280px] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer"
+          className="bg-[#18181b] min-h-[305px] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -381,13 +381,18 @@ function HomePage() {
     ) : (
       <div className="bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer">
         <div className="relative">
-          <img src={video.thumbnail} alt={video.title} className="w-full h-48 object-cover" />
-          <span className="absolute top-2 left-2 bg-purple-600 text-xs font-bold px-2 py-1 rounded text-white">
-            VIDEO
-          </span>
+          <video
+            ref={videoRef}
+            src={video.videoUrl}
+            className="w-full h-48 object-cover bg-black"
+            muted
+            playsInline
+            preload="metadata"
+            style={{ display: 'block' }}
+          />
           {/* View count with triangle icon, bottom left */}
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 px-2 py-1 rounded text-white text-sm font-medium">
-            <Triangle size={18} className="text-white" fill="white" />
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-black/60 px-2 py-1 rounded text-white font-medium">
+            <Triangle size={14} className="text-white rotate-90" />
             {video.views >= 1000 ? `${(video.views / 1000).toFixed(1)}K` : video.views}
           </div>
           <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
@@ -449,7 +454,7 @@ function HomePage() {
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
         onRegistrationComplete={(user) => {
-          setCurrentUser(user)
+          setCurrentUser(user as User)
           setShowDialog(false)
         }}
         aptosAddress={account || ''}

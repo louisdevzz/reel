@@ -759,6 +759,32 @@ class ApiService {
     }
   }
 
+  async deleteVideo(videoId: string, userId: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/videos/${videoId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId }),
+      });
+      return true;
+    } catch (error) {
+      handleError(error, 'deleteVideo');
+      return false;
+    }
+  }
+
+  async deleteShort(shortId: string, userId: string): Promise<boolean> {
+    try {
+      await this.request<void>(`/videos/shorts/${shortId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId }),
+      });
+      return true;
+    } catch (error) {
+      handleError(error, 'deleteShort');
+      return false;
+    }
+  }
+
   // ===== ENGAGEMENT SYSTEM APIs =====
 
   // View Tracking APIs

@@ -1,16 +1,9 @@
 import { Router } from 'express'
 import { VideoController } from '../controllers/videoController'
-import { VideoService } from '../services/videoService'
 import multer from 'multer'
 
 const router = Router()
 const videoController = new VideoController()
-const videoService = new VideoService()
-
-// Upload video (metadata only)
-router.post('/upload', async (req, res) => {
-  await videoController.uploadVideo(req, res)
-})
 
 // Upload video file
 router.post('/upload/file', (req, res, next) => {
@@ -80,6 +73,16 @@ router.get('/:id', async (req, res) => {
 // Delete all videos and shorts
 router.delete('/all', async (req, res) => {
   await videoController.deleteAllVideos(req, res)
+})
+
+// Delete individual video
+router.delete('/:id', async (req, res) => {
+  await videoController.deleteVideo(req, res)
+})
+
+// Delete individual short
+router.delete('/shorts/:id', async (req, res) => {
+  await videoController.deleteShort(req, res)
 })
 
 export default router 

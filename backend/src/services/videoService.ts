@@ -27,7 +27,6 @@ export class VideoService {
   async uploadVideo(data: UploadVideoRequest): Promise<VideoUploadResponse> {
     // Determine if it's a short (≤ 60 seconds) or regular video (> 60 seconds)
     const isShort = data.duration <= 60
-    const type = isShort ? 'short' : 'video'
     const videoId = uuidv4()
 
     try {
@@ -269,6 +268,82 @@ export class VideoService {
     } catch (error) {
       console.error('Database error during delete all videos:', error)
       throw new Error(`Failed to delete all videos: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  async deleteVideo(videoId: string, userId: string) {
+    try {
+      // First check if the video exists and belongs to the user
+      const [video] = await db.select().from(videos).where(eq(videos.id, videoId))
+      
+      if (!video) {
+        throw new Error('Video not found')
+      }
+      
+      if (video.userId !== userId) {
+        throw new Error('You do not have permission to delete this video')
+      }
+
+      // Delete the video
+      const [deletedVideo] = await db.delete(videos).where(eq(videos.id, videoId)).returning()
+      
+      if (!deletedVideo) {
+        throw new Error('Failed to delete video')
+      }
+
+      // Update user's videos count
+      await db.execute(
+        `UPDATE users SET videos = GREATEST(videos - 1, 0) WHERE id = '${userId}'`
+      ).catch(error => {
+        console.error('Failed to update user videos count:', error)
+      })
+
+      return {
+        success: true,
+        message: 'Video deleted successfully',
+        deletedVideo
+      }
+    } catch (error) {
+      console.error('Database error during video deletion:', error)
+      throw new Error(`Failed to delete video: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  async deleteShort(shortId: string, userId: string) {
+    try {
+      // First check if the short exists and belongs to the user
+      const [short] = await db.select().from(shorts).where(eq(shorts.id, shortId))
+      
+      if (!short) {
+        throw new Error('Short not found')
+      }
+      
+      if (short.userId !== userId) {
+        throw new Error('You do not have permission to delete this short')
+      }
+
+      // Delete the short
+      const [deletedShort] = await db.delete(shorts).where(eq(shorts.id, shortId)).returning()
+      
+      if (!deletedShort) {
+        throw new Error('Failed to delete short')
+      }
+
+      // Update user's shorts count
+      await db.execute(
+        `UPDATE users SET shorts = GREATEST(shorts - 1, 0) WHERE id = '${userId}'`
+      ).catch(error => {
+        console.error('Failed to update user shorts count:', error)
+      })
+
+      return {
+        success: true,
+        message: 'Short deleted successfully',
+        deletedShort
+      }
+    } catch (error) {
+      console.error('Database error during short deletion:', error)
+      throw new Error(`Failed to delete short: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 } 

@@ -39,6 +39,8 @@ export class VideoController {
       const { title, description, duration, thumbnail, videoUrl, tags, isPublic } = req.body
       const userId = req.body.userId // In a real app, this would come from authentication
 
+      console.log('duration', duration)
+
       if (!title || !duration || !thumbnail || !videoUrl || !userId) {
         return res.status(400).json({
           error: 'Missing required fields: title, duration, thumbnail, videoUrl, userId'
@@ -75,7 +77,7 @@ export class VideoController {
   async uploadVideoFile(req: Request, res: Response) {
     try {
       const file = req.file
-      const { title, description, tags, isPublic, userId } = req.body
+      const { title, description, duration, tags, isPublic, userId } = req.body
 
       if (!file) {
         return res.status(400).json({ error: 'No video file provided' })
@@ -100,11 +102,8 @@ export class VideoController {
           file.mimetype
         )
 
-        // Get video duration in parallel (if possible)
-        const durationPromise = this.getVideoDuration(file.buffer).catch(() => 30)
-
         // Wait for both operations
-        const [videoUrl, duration] = await Promise.all([uploadPromise, durationPromise])
+        const [videoUrl] = await Promise.all([uploadPromise])
 
         // Generate thumbnail asynchronously (don't wait for it)
         const thumbnailPromise = r2Service.generateThumbnail(videoUrl).catch(() => 
@@ -144,20 +143,6 @@ export class VideoController {
         error: 'Failed to upload video file',
         message: error instanceof Error ? error.message : 'Unknown error'
       })
-    }
-  }
-
-  // Helper method to get video duration
-  private async getVideoDuration(buffer: Buffer): Promise<number> {
-    try {
-      // This is a simplified approach - in production you'd use ffprobe or similar
-      // For now, estimate based on file size (rough approximation)
-      const sizeInMB = buffer.length / (1024 * 1024)
-      const estimatedDuration = Math.max(15, Math.min(60, sizeInMB * 2)) // 15-60 seconds
-      return Math.round(estimatedDuration)
-    } catch (error) {
-      console.error('Error getting video duration:', error)
-      return 30 // Default fallback
     }
   }
 
@@ -357,6 +342,64 @@ export class VideoController {
       console.error('Error deleting all videos:', error)
       res.status(500).json({
         error: 'Failed to delete all videos',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  async deleteVideo(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      const { userId } = req.body
+
+      if (!id) {
+        return res.status(400).json({ error: 'Video ID is required' })
+      }
+
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' })
+      }
+
+      const result = await videoService.deleteVideo(id, userId)
+      
+      res.json({
+        success: true,
+        data: result,
+        message: result.message
+      })
+    } catch (error) {
+      console.error('Error deleting video:', error)
+      res.status(500).json({
+        error: 'Failed to delete video',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  async deleteShort(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      const { userId } = req.body
+
+      if (!id) {
+        return res.status(400).json({ error: 'Short ID is required' })
+      }
+
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' })
+      }
+
+      const result = await videoService.deleteShort(id, userId)
+      
+      res.json({
+        success: true,
+        data: result,
+        message: result.message
+      })
+    } catch (error) {
+      console.error('Error deleting short:', error)
+      res.status(500).json({
+        error: 'Failed to delete short',
         message: error instanceof Error ? error.message : 'Unknown error'
       })
     }
