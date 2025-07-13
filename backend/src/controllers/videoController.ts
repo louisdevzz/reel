@@ -226,7 +226,8 @@ export class VideoController {
 
   async getAllVideos(req: Request, res: Response) {
     try {
-      const videos = await videoService.getAllVideos()
+      const limit = parseInt(req.query.limit as string) || 20
+      const videos = await videoService.getAllVideos(limit)
       res.json({ success: true, data: videos })
     } catch (error) {
       console.error('Error getting all videos:', error)

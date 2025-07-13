@@ -1,17 +1,32 @@
 export interface Video {
-    id: string;
-    title: string;
-    description?: string;
-    duration: number; // in seconds
-    type: 'video' | 'short'; // video: > 60s, short: <= 60s
-    thumbnail: string;
-    videoUrl: string;
-    views: number;
-    likes: number;
-    uploadDate: Date;
-    userId: string;
-    tags?: string[];
-    isPublic: boolean;
+  id: string
+  title: string
+  description: string
+  videoUrl: string
+  thumbnail: string
+  views: number
+  likes: number
+  shares: number
+  comments: number
+  uploadDate: string
+  userId: string
+  creator?: string
+  creatorFullName?: string
+  creatorAvatar?: string
+  creatorFollowers?: number
+}
+
+export interface Comment {
+  id: string
+  content: string
+  userId: string
+  videoId: string
+  createdAt: string
+  user: {
+    username: string
+    fullName: string
+    avatar: string
+  }
 }
 
 export interface Short {

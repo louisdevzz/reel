@@ -119,24 +119,125 @@ export class VideoService {
   }
 
   async getVideoById(id: string) {
-    const [video] = await db.select().from(videos).where(eq(videos.id, id))
+    const [video] = await db
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        duration: videos.duration,
+        thumbnail: videos.thumbnail,
+        videoUrl: videos.videoUrl,
+        views: videos.views,
+        likes: videos.likes,
+        shares: videos.shares,
+        comments: videos.comments,
+        uploadDate: videos.uploadDate,
+        userId: videos.userId,
+        tags: videos.tags,
+        isPublic: videos.isPublic,
+        // User information
+        creator: users.username,
+        creatorFullName: users.fullName,
+        creatorAvatar: users.avatar,
+        creatorFollowers: users.followers,
+      })
+      .from(videos)
+      .leftJoin(users, eq(videos.userId, users.id))
+      .where(eq(videos.id, id))
     return video
   }
 
   async getVideoByIdUniversal(id: string) {
     // Tìm trong bảng videos trước
-    const [video] = await db.select().from(videos).where(eq(videos.id, id))
+    const [video] = await db
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        duration: videos.duration,
+        thumbnail: videos.thumbnail,
+        videoUrl: videos.videoUrl,
+        views: videos.views,
+        likes: videos.likes,
+        shares: videos.shares,
+        comments: videos.comments,
+        uploadDate: videos.uploadDate,
+        userId: videos.userId,
+        tags: videos.tags,
+        isPublic: videos.isPublic,
+        // User information
+        creator: users.username,
+        creatorFullName: users.fullName,
+        creatorAvatar: users.avatar,
+        creatorFollowers: users.followers,
+      })
+      .from(videos)
+      .leftJoin(users, eq(videos.userId, users.id))
+      .where(eq(videos.id, id))
+    
     if (video) {
       return video
     }
     
     // Nếu không tìm thấy, tìm trong bảng shorts
-    const [short] = await db.select().from(shorts).where(eq(shorts.id, id))
+    const [short] = await db
+      .select({
+        id: shorts.id,
+        title: shorts.title,
+        description: shorts.description,
+        duration: shorts.duration,
+        thumbnail: shorts.thumbnail,
+        videoUrl: shorts.videoUrl,
+        views: shorts.views,
+        likes: shorts.likes,
+        shares: shorts.shares,
+        comments: shorts.comments,
+        bookmarks: shorts.bookmarks,
+        uploadDate: shorts.uploadDate,
+        userId: shorts.userId,
+        tags: shorts.tags,
+        isPublic: shorts.isPublic,
+        // User information
+        creator: users.username,
+        creatorFullName: users.fullName,
+        creatorAvatar: users.avatar,
+        creatorFollowers: users.followers,
+      })
+      .from(shorts)
+      .leftJoin(users, eq(shorts.userId, users.id))
+      .where(eq(shorts.id, id))
+    
     return short
   }
 
-  async getAllVideos() {
-    return await db.select().from(videos).where(eq(videos.isPublic, true)).orderBy(desc(videos.uploadDate))
+  async getAllVideos(limit: number = 20) {
+    return await db
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        duration: videos.duration,
+        thumbnail: videos.thumbnail,
+        videoUrl: videos.videoUrl,
+        views: videos.views,
+        likes: videos.likes,
+        shares: videos.shares,
+        comments: videos.comments,
+        uploadDate: videos.uploadDate,
+        userId: videos.userId,
+        tags: videos.tags,
+        isPublic: videos.isPublic,
+        // User information
+        creator: users.username,
+        creatorFullName: users.fullName,
+        creatorAvatar: users.avatar,
+        creatorFollowers: users.followers,
+      })
+      .from(videos)
+      .leftJoin(users, eq(videos.userId, users.id))
+      .where(eq(videos.isPublic, true))
+      .orderBy(desc(videos.uploadDate))
+      .limit(limit)
   }
 
   async getAllShorts() {

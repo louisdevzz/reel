@@ -51,7 +51,7 @@ export function Sidebar({ isExpanded }: SidebarProps) {
     <aside className={`relative flex flex-col bg-[#1f1f23] border-r transition-all duration-300 border border-[#2f2f35] ${isExpanded ? 'w-64' : 'w-0'} mt-16 h-[calc(100vh-64px)]`}>
       {isExpanded && (
         <div className="flex-1 overflow-y-auto p-4">
-          <div>
+          {/* <div>
             <h2 className="text-xs text-[#adadb8] font-bold uppercase mb-2">Categories</h2>
             {loading ? (
               <div className="text-[#adadb8] text-xs">Loading...</div>
@@ -59,7 +59,6 @@ export function Sidebar({ isExpanded }: SidebarProps) {
               <ul className="space-y-1">
                 {categories.map((category,index) => (
                   <li key={index}>
-                    {/* Main Category */}
                     <div 
                       className="flex items-center justify-between group hover:bg-[#27272e] rounded px-2 py-1 cursor-pointer"
                       onClick={() => handleCategoryClick(category.name)}
@@ -80,7 +79,6 @@ export function Sidebar({ isExpanded }: SidebarProps) {
                       </div>
                     </div>
                     
-                    {/* Subcategories */}
                     {selectedCategory === category.name && (
                       <ul className="ml-6 mt-1 space-y-1">
                         {category.subCategories.map((subCategory) => (
@@ -106,9 +104,9 @@ export function Sidebar({ isExpanded }: SidebarProps) {
               </ul>
             )}
             <button className="text-[#9147FF] text-xs mt-2 hover:underline">Xem thêm</button>
-          </div>
+          </div> */}
           
-          <div className="mt-6">
+          <div>
             <h2 className="text-xs text-[#adadb8] font-bold uppercase mb-2">Top Creators</h2>
             {loading ? (
               <div className="text-[#adadb8] text-xs">Loading...</div>

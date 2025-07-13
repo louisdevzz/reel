@@ -699,6 +699,26 @@ class ApiService {
     }
   }
 
+  async getVideoById(id: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ success: boolean; data: any }>(`/videos/${id}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getVideoById');
+      return null;
+    }
+  }
+
+  async getAllVideos(limit: number = 15): Promise<any[]> {
+    try {
+      const response = await this.request<{ success: boolean; data: any[] }>(`/videos?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllVideos');
+      return [];
+    }
+  }
+
   async getShorts(): Promise<any[]> {
     try {
       const response = await this.request<{ success: boolean; data: any[] }>('/videos/shorts');

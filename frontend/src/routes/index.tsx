@@ -379,7 +379,11 @@ function HomePage() {
         </div>
       </Link>
     ) : (
-      <div className="bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer">
+      <Link
+        to="/v/$videoId"
+        params={{ videoId: String(video.id) }}
+        className="bg-[#18181b] rounded-lg overflow-hidden border border-[#27272a] shadow group hover:scale-[1.03] transition-transform cursor-pointer"
+      >
         <div className="relative">
           <video
             ref={videoRef}
@@ -417,7 +421,7 @@ function HomePage() {
             </div>
           )}
         </div>
-      </div>
+      </Link>
     )
   }
 
