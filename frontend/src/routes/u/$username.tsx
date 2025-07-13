@@ -6,6 +6,9 @@ import { useState, useEffect } from "react";
 import { apiService, User } from "../../lib/apiService";
 import { VideoThumbnail } from "../../components/VideoThumbnail";
 import { SocialMediaService, formatFollowerCount } from "../../lib/socialMediaService";
+import { useUser } from "../../contexts/userContext";
+import { CustomProfileDialog } from "../../components/CustomProfileDialog";
+import { relayerService } from "../../lib/relayerService";
 
 export const Route = createFileRoute('/u/$username')({
     component: ProfilePage,
@@ -14,6 +17,7 @@ export const Route = createFileRoute('/u/$username')({
 function ProfilePage() {
     const { username } = Route.useParams();
     const navigate = useNavigate();
+    const { currentUser } = useUser();
     const [open, setOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [user, setUser] = useState<User | null>(null);
@@ -27,6 +31,11 @@ function ProfilePage() {
     const [analyticsLoading, setAnalyticsLoading] = useState(true);
     const [socialStats, setSocialStats] = useState<any>({});
     const [socialStatsLoading, setSocialStatsLoading] = useState(true);
+    const [showCustomProfileDialog, setShowCustomProfileDialog] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+
+    // Check if current user is viewing their own profile
+    const isOwnProfile = currentUser && user && currentUser.username === user.username;
 
     // Update document title when user data is loaded
     useEffect(() => {
@@ -153,6 +162,53 @@ function ProfilePage() {
         fetchSocialMediaStats();
     }, [user]);
 
+    // Check follow status when user data is loaded
+    useEffect(() => {
+        const checkFollowStatus = async () => {
+            if (!currentUser?.id || !user?.id || currentUser.id === user.id) {
+                setIsFollowing(false);
+                return;
+            }
+            
+            try {
+                const following = await apiService.isFollowing(currentUser.id, user.id);
+                setIsFollowing(following);
+            } catch (error) {
+                console.error('Error checking follow status:', error);
+                setIsFollowing(false);
+            }
+        };
+        
+        checkFollowStatus();
+    }, [currentUser?.id, user?.id]);
+
+    const handleFollow = async () => {
+        if (!currentUser?.id || !user?.id || isFollowing) return;
+
+        // Prevent self-following
+        if (currentUser.id === user.id) {
+            console.log('Cannot follow yourself');
+            return;
+        }
+
+        const newFollowers = Number(user.followers) + 1;
+
+        try {
+            // Follow
+            await apiService.followUser(currentUser.id, user.id);
+            setIsFollowing(true);
+            await relayerService.updateFollowers(user.aptosAddress, newFollowers);
+            
+            // Update local user state to reflect new follower count
+            setUser(prev => prev ? { ...prev, followers: newFollowers } : null);
+            
+            console.log('Followed user:', user.username);
+        } catch (error) {
+            console.error('Error handling follow:', error);
+            // You could add a toast notification here to show the error to the user
+        }
+    };
+
     const handleCopy = () => {
         if (user?.aptosAddress) {
             navigator.clipboard.writeText(user.aptosAddress);
@@ -188,7 +244,7 @@ function ProfilePage() {
             <div className="flex flex-col flex-1 h-[calc(100vh-4rem)] overflow-y-auto w-full">
                 <div className="relative">
                     <img
-                        src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=1200&q=80"
+                        src={user.banner || "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=1200&q=80"}
                         alt="Banner"
                         className="w-full h-48 object-cover opacity-60"
                     />
@@ -214,83 +270,99 @@ function ProfilePage() {
                                 <div className="flex gap-2 mt-2 flex-wrap">
                                     {user.tags?.map((tag, index) => (
                                         <span key={index} className="bg-[#23243a] text-[#fff] px-3 py-1 rounded-full text-xs font-medium">#{tag}</span>
-                                    )) || (
-                                        <>
-                                            <span className="bg-[#23243a] text-[#fff] px-3 py-1 rounded-full text-xs font-medium">#minecraft</span>
-                                            <span className="bg-[#23243a] text-[#fff] px-3 py-1 rounded-full text-xs font-medium">#CS:GO</span>
-                                            <span className="bg-[#23243a] text-[#fff] px-3 py-1 rounded-full text-xs font-medium">#dota2</span>
-                                        </>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-2 lg:gap-4 flex-wrap">
-                            <button className="bg-[#232323] text-white font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base">Customize Channel</button>
-                            <button className="bg-[#232323] text-white font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base">Manage Videos</button>
-                            <button className="bg-[#232323] text-white font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base">Follow</button>
-                        </div>
+                        {isOwnProfile ? (
+                            <div className="flex gap-2 lg:gap-4 flex-wrap">
+                                <button 
+                                    onClick={() => setShowCustomProfileDialog(true)}
+                                    className="bg-[#232323] text-white font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base hover:bg-[#333] transition-colors"
+                                >
+                                    Customize Profile
+                                </button>
+                                <button 
+                                    onClick={()=>navigate({to:"/studio"})}
+                                    className="bg-[#232323] text-white font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base"
+                                >
+                                    Manage Videos
+                                </button>
+                            </div>
+                        ):(
+                            <button 
+                                onClick={handleFollow}
+                                className={`font-bold px-3 lg:px-6 py-2 rounded-full text-sm lg:text-base transition-colors ${
+                                    isFollowing 
+                                        ? 'bg-[#6366f1] text-white hover:bg-[#4f46e5]' 
+                                        : 'bg-[#232323] text-white hover:bg-[#333]'
+                                }`}
+                            >
+                                {isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8 px-6 lg:px-12">
                     <div className="flex gap-6 lg:gap-10 items-center justify-center lg:justify-start flex-wrap">
-                        <Stat 
-                            icon={<FaTwitch className="text-[#9147ff] text-xl lg:text-2xl" />} 
-                            label="twitch" 
-                            value={
-                                socialStatsLoading 
-                                    ? "Loading..." 
-                                    : socialStats.twitch 
-                                        ? formatFollowerCount(socialStats.twitch.followers)
-                                        : user.social?.twitch 
-                                            ? "Active" 
-                                            : "N/A"
-                            } 
-                        />
-                        <Stat 
-                            icon={<FaTwitter className="text-[#1da1f2] text-xl lg:text-2xl" />} 
-                            label="twitter" 
-                            value={
-                                socialStatsLoading 
-                                    ? "Loading..." 
-                                    : socialStats.twitter 
-                                        ? formatFollowerCount(socialStats.twitter.followers)
-                                        : user.social?.twitter 
-                                            ? "Active" 
-                                            : "N/A"
-                            } 
-                        />
-                        <Stat 
-                            icon={<FaTiktok className="text-[#fff] text-xl lg:text-2xl" />} 
-                            label="tik tok" 
-                            value={
-                                socialStatsLoading 
-                                    ? "Loading..." 
-                                    : socialStats.tiktok 
-                                        ? formatFollowerCount(socialStats.tiktok.followers)
-                                        : user.social?.tiktok 
-                                            ? "Active" 
-                                            : "N/A"
-                            } 
-                        />
-                        <Stat 
-                            icon={<FaYoutube className="text-[#ff0000] text-xl lg:text-2xl" />} 
-                            label="youtube" 
-                            value={
-                                socialStatsLoading 
-                                    ? "Loading..." 
-                                    : socialStats.youtube 
-                                        ? formatFollowerCount(socialStats.youtube.followers)
-                                        : user.social?.youtube 
-                                            ? "Active" 
-                                            : "N/A"
-                            } 
-                        />
+                        {user.social?.twitch && (
+                            <Stat 
+                                icon={<FaTwitch className="text-[#9147ff] text-xl lg:text-2xl" />} 
+                                label="twitch" 
+                                value={
+                                    socialStatsLoading 
+                                        ? "Loading..." 
+                                        : socialStats.twitch 
+                                            ? formatFollowerCount(socialStats.twitch.followers)
+                                            : "Active"
+                                } 
+                            />
+                        )}
+                        {user.social?.twitter && (
+                            <Stat 
+                                icon={<FaTwitter className="text-[#1da1f2] text-xl lg:text-2xl" />} 
+                                label="twitter" 
+                                value={
+                                    socialStatsLoading 
+                                        ? "Loading..." 
+                                        : socialStats.twitter 
+                                            ? formatFollowerCount(socialStats.twitter.followers)
+                                            : "Active"
+                                } 
+                            />
+                        )}
+                        {user.social?.tiktok && (
+                            <Stat 
+                                icon={<FaTiktok className="text-[#fff] text-xl lg:text-2xl" />} 
+                                label="tik tok" 
+                                value={
+                                    socialStatsLoading 
+                                        ? "Loading..." 
+                                        : socialStats.tiktok 
+                                            ? formatFollowerCount(socialStats.tiktok.followers)
+                                            : "Active"
+                                } 
+                            />
+                        )}
+                        {user.social?.youtube && (
+                            <Stat 
+                                icon={<FaYoutube className="text-[#ff0000] text-xl lg:text-2xl" />} 
+                                label="youtube" 
+                                value={
+                                    socialStatsLoading 
+                                        ? "Loading..." 
+                                        : socialStats.youtube 
+                                            ? formatFollowerCount(socialStats.youtube.followers)
+                                            : "Active"
+                                } 
+                            />
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="text-[#a1a1aa] text-xs font-semibold mb-1">ABOUT ME</div>
-                        <div className="text-[#fff] text-sm">
-                            {user.description?.substring(0, 150)}...{' '}
+                        <div className="text-[#fff] text-sm flex flex-row gap-5">
+                            {user.description.length > 150 ? user.description?.substring(0, 150) + '...' : user.description}
                             <span className="text-[#6366f1] cursor-pointer" onClick={() => setOpen(true)}>Show more</span>
                         </div>
                     </div>
@@ -470,6 +542,18 @@ function ProfilePage() {
                     )}
                 </div>
             </div>
+            {/* Custom Profile Dialog */}
+            {isOwnProfile && user && (
+                <CustomProfileDialog
+                    isOpen={showCustomProfileDialog}
+                    onClose={() => setShowCustomProfileDialog(false)}
+                    onProfileUpdated={(updatedUser) => {
+                        setUser(updatedUser);
+                        setShowCustomProfileDialog(false);
+                    }}
+                    currentUser={user}
+                />
+            )}
         </div>
     );
 }

@@ -1,7 +1,6 @@
 import { apiService } from './apiService'
 import { StreamKey, StreamSettings} from './streamUtils'
 
-// Helper function to convert apiService StreamKey to streamUtils StreamKey
 function convertApiStreamKey(apiKey: any): StreamKey {
   return {
     ...apiKey,
@@ -10,7 +9,6 @@ function convertApiStreamKey(apiKey: any): StreamKey {
   }
 }
 
-// Frontend service that uses the backend API
 class StreamKeyService {
   // Create a new stream key
   async createStreamKey(name: string, userId: string): Promise<StreamKey> {

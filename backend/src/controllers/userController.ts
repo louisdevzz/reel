@@ -137,7 +137,7 @@ export class UserController {
   // Create new user
   async createUser(req: Request, res: Response) {
     try {
-      const { username, fullName, email, description, avatar, aptosAddress, category, subCategory, tags, social } = req.body
+      const { username, fullName, email, description, avatar, banner, aptosAddress, category, subCategory, tags, social } = req.body
 
       // Validate required fields
       if (!username || !fullName || !email || !description || !aptosAddress) {
@@ -185,6 +185,7 @@ export class UserController {
         email,
         description,
         avatar,
+        banner,
         aptosAddress,
         category,
         subCategory,

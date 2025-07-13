@@ -7,6 +7,7 @@ interface CreateUserRequest {
   email: string
   description: string
   avatar?: string
+  banner?: string
   aptosAddress: string
   category?: string
   subCategory?: string
@@ -86,6 +87,7 @@ class UserService {
         fullName: data.fullName,
         description: data.description,
         avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
+        banner: data.banner,
         email: data.email,
         aptosAddress: data.aptosAddress,
         category: data.category,

@@ -15,6 +15,13 @@
       "when": 1752343369711,
       "tag": "0001_real_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1752398591116,
+      "tag": "0002_thin_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

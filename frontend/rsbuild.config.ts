@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   source: {
     define:{
+      "process.env.PUBLIC_JWT_PINATA_SECRET": JSON.stringify(process.env.PUBLIC_JWT_PINATA_SECRET),
       "process.env.PUBLIC_RELAYER_URL": JSON.stringify(process.env.PUBLIC_RELAYER_URL),
       "process.env.PUBLIC_GOOGLE_CLIENT_ID": JSON.stringify(process.env.PUBLIC_GOOGLE_CLIENT_ID),
       "process.env.PUBLIC_API_URL": JSON.stringify(process.env.PUBLIC_API_URL),

@@ -78,6 +78,7 @@ export interface User {
   description: string;
   balance: number;
   avatar: string;
+  banner?: string;
   category: string;
   subCategory: string;
   email: string;
@@ -493,6 +494,7 @@ class ApiService {
     email: string
     description: string
     avatar?: string
+    banner?: string
     aptosAddress: string
     category?: string
     subCategory?: string

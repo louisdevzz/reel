@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User } from '../types'
-import { apiService } from '../lib/apiService'
+import { apiService, User } from '../lib/apiService'
 
 interface UserContextType {
   currentUser: User | null

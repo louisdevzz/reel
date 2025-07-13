@@ -157,6 +157,26 @@ export interface TotalTipsResponse {
   };
 }
 
+export interface UpdateUserInfoRequest {
+  user_addr: string;
+  full_name: string;
+  description: string;
+  avatar?: string;
+  banner?: string;
+  category: string;
+  sub_category: string;
+  tags: string[];
+  social: SocialLinks;
+}
+
+export interface UpdateUserInfoResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    hash: string;
+  };
+}
+
 class RelayerService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${RELAYER_BASE_URL}${endpoint}`;
@@ -216,6 +236,19 @@ class RelayerService {
       return response.data;
     } catch (error) {
       handleError(error, 'updateBalance');
+      return null;
+    }
+  }
+
+  async updateUserInfo(userData: UpdateUserInfoRequest): Promise<UpdateUserInfoResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: UpdateUserInfoResponse }>('/api/users/update-info', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateUserInfo');
       return null;
     }
   }
@@ -304,6 +337,32 @@ class RelayerService {
       return response.data;
     } catch (error) {
       handleError(error, 'getTipStats');
+      return null;
+    }
+  }
+
+  async updateFollowers(address: string, newFollowers: number): Promise<{ hash: string } | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: { hash: string } }>(`/api/users/${address}/update-followers`, {
+        method: 'POST',
+        body: JSON.stringify({ newFollowers }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateFollowers');
+      return null;
+    }
+  }
+
+  async updateFollowing(address: string, newFollowing: number): Promise<{ hash: string } | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: { hash: string } }>(`/api/users/${address}/update-following`, {
+        method: 'POST',
+        body: JSON.stringify({ newFollowing }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateFollowing');
       return null;
     }
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
-import { User } from '../types'
+import { User } from '../lib/apiService'
 import { apiService } from '../lib/apiService'
 import { relayerService } from '../lib/relayerService'
 import { toast } from 'react-hot-toast'
@@ -10,14 +10,14 @@ interface Category {
   subCategories: string[]
 }
 
-interface UserRegistrationDialogProps {
+interface CustomProfileDialogProps {
   isOpen: boolean
   onClose: () => void
-  onRegistrationComplete: (user: User) => void
-  aptosAddress: string
+  onProfileUpdated: (user: User) => void
+  currentUser: User
 }
 
-interface RegistrationFormData {
+interface ProfileFormData {
   username: string
   fullName: string
   email: string
@@ -43,13 +43,13 @@ interface RegistrationFormData {
   }
 }
 
-export function UserRegistrationDialog({
+export function CustomProfileDialog({
   isOpen,
   onClose,
-  onRegistrationComplete,
-  aptosAddress
-}: UserRegistrationDialogProps) {
-  const [formData, setFormData] = useState<RegistrationFormData>({
+  onProfileUpdated,
+  currentUser
+}: CustomProfileDialogProps) {
+  const [formData, setFormData] = useState<ProfileFormData>({
     username: '',
     fullName: '',
     email: '',
@@ -61,7 +61,7 @@ export function UserRegistrationDialog({
     tags: [],
     social: {}
   })
-  const [errors, setErrors] = useState<Partial<RegistrationFormData>>({})
+  const [errors, setErrors] = useState<Partial<ProfileFormData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [tagInput, setTagInput] = useState('')
@@ -94,8 +94,28 @@ export function UserRegistrationDialog({
     }
   }, [isOpen])
 
+  // Load current user data when dialog opens
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      setFormData({
+        username: currentUser.username,
+        fullName: currentUser.fullName,
+        email: currentUser.email,
+        description: currentUser.description,
+        avatar: currentUser.avatar || '',
+        banner: currentUser.banner || '',
+        category: currentUser.category,
+        subCategory: currentUser.subCategory,
+        tags: currentUser.tags || [],
+        social: currentUser.social || {}
+      })
+      setAvatarPreview(currentUser.avatar || '')
+      setBannerPreview(currentUser.banner || '')
+    }
+  }, [isOpen, currentUser])
+
   const validateStep = (step: number): boolean => {
-    const newErrors: Partial<RegistrationFormData> = {}
+    const newErrors: Partial<ProfileFormData> = {}
 
     if (step === 1) {
       if (!formData.username.trim()) {
@@ -150,43 +170,43 @@ export function UserRegistrationDialog({
 
     setIsSubmitting(true)
     try {
-      const userData = await apiService.createUser({
+      // Update user via API
+      const updatedUser = await apiService.updateUser(currentUser.id, {
         username: formData.username,
         fullName: formData.fullName,
         email: formData.email,
         description: formData.description,
         avatar: formData.avatar,
         banner: formData.banner,
-        aptosAddress,
         category: formData.category,
         subCategory: formData.subCategory,
         tags: formData.tags,
         social: formData.social
       })
 
-      //register user via relayer
-      await relayerService.registerUser({
-        user_addr: aptosAddress,
-        username: formData.username,
+      // Update user via relayer (blockchain)
+      await relayerService.updateUserInfo({
+        user_addr: currentUser.aptosAddress,
         full_name: formData.fullName,
         description: formData.description,
         avatar: formData.avatar,
         banner: formData.banner,
         category: formData.category,
         sub_category: formData.subCategory,
-        email: formData.email,
         tags: formData.tags,
         social: formData.social
       })
 
-      if (userData) {
-        onRegistrationComplete(userData)
+      if (updatedUser) {
+        onProfileUpdated(updatedUser)
+        toast.success('Profile updated successfully!')
+        onClose()
       } else {
-        throw new Error('Failed to create user')
+        throw new Error('Failed to update profile')
       }
     } catch (error) {
-      console.error('Registration failed:', error)
-      // You might want to show an error message to the user here
+      console.error('Profile update failed:', error)
+      toast.error('Failed to update profile. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -209,7 +229,7 @@ export function UserRegistrationDialog({
     }))
   }
 
-  const updateSocialField = (field: keyof RegistrationFormData['social'], value: string) => {
+  const updateSocialField = (field: keyof ProfileFormData['social'], value: string) => {
     setFormData(prev => ({
       ...prev,
       social: {
@@ -316,14 +336,14 @@ export function UserRegistrationDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-[#18181b] text-white max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold mb-2">
-            Complete Your Profile
+            Customize Your Profile
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Step {currentStep} of {totalSteps} - Please provide your information to complete registration
+            Step {currentStep} of {totalSteps} - Update your profile information
           </DialogDescription>
         </DialogHeader>
 
@@ -390,7 +410,7 @@ export function UserRegistrationDialog({
               {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>
 
-            {/* Avatar Upload - no upload button */}
+            {/* Avatar Upload */}
             <div>
               <label className="block text-sm font-medium mb-2">Avatar *</label>
               <div
@@ -424,7 +444,7 @@ export function UserRegistrationDialog({
               {errors.avatar && <p className="text-red-400 text-sm mt-1">{errors.avatar}</p>}
             </div>
 
-            {/* Banner Upload - no upload button */}
+            {/* Banner Upload */}
             <div>
               <label className="block text-sm font-medium mb-2">Banner</label>
               <div
@@ -616,7 +636,7 @@ export function UserRegistrationDialog({
               disabled={isSubmitting}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 px-6 py-3 rounded-lg transition-colors"
             >
-              {isSubmitting ? 'Creating Profile...' : 'Complete Registration'}
+              {isSubmitting ? 'Updating Profile...' : 'Save Changes'}
             </button>
           )}
         </div>

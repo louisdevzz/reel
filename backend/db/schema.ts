@@ -7,6 +7,7 @@ export const users = pgTable('users', {
   fullName: text('full_name').notNull(),
   description: text('description').notNull(),
   avatar: text('avatar'),
+  banner: text('banner'),
   category: text('category').notNull().default('Gaming'),
   subCategory: text('sub_category').notNull().default('Valorant'),
   email: text('email').notNull(),

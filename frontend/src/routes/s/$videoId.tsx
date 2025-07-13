@@ -5,6 +5,8 @@ import { viewTrackingService } from '../../lib/viewTrackingService'
 import { useUser } from '../../contexts/userContext'
 import { CommentSection } from '../../components/CommentSection'
 import { Plus } from 'lucide-react'
+import { User } from '../../types'
+import { relayerService } from '../../lib/relayerService'
 
 export const Route = createFileRoute('/s/$videoId')({
   component: ShortVideoPage,
@@ -24,6 +26,7 @@ function ShortVideoPage() {
   const [hasInteracted, setHasInteracted] = useState(false)
   const [preloadedVideoElements, setPreloadedVideoElements] = useState<{[id: string]: HTMLVideoElement | null}>({})
   const [showComments, setShowComments] = useState(false)
+  const [user, setUser] = useState<User | null>(null);
 
   const { currentUser } = useUser()
   const currentUserId = currentUser?.id
@@ -569,18 +572,15 @@ function ShortVideoPage() {
       return
     }
 
+    const user = await apiService.getUserByUsername(currentVideo.creator)
+    const newFollowers = Number(user?.followers) + 1
+
     try {
-      if (isFollowing) {
-        // Unfollow
-        await apiService.unfollowUser(currentUserId, currentVideo.userId)
-        setIsFollowing(false)
-        console.log('Unfollowed user:', currentVideo.creator)
-      } else {
-        // Follow
-        await apiService.followUser(currentUserId, currentVideo.userId)
-        setIsFollowing(true)
-        console.log('Followed user:', currentVideo.creator)
-      }
+      // Follow
+      await apiService.followUser(currentUserId, currentVideo.userId)
+      setIsFollowing(true)
+      await relayerService.updateFollowers(user?.aptosAddress || '', newFollowers)
+      console.log('Followed user:', currentVideo.creator)
     } catch (error) {
       console.error('Error handling follow:', error)
       // You could add a toast notification here to show the error to the user
