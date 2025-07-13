@@ -145,7 +145,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center space-x-3 ml-8">
             {!isConnected ? (
               <>
-                <button onClick={() => setConnectDialogOpen(true)} className="bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-white hover:text-black transition-all duration-200">Login</button>
+                <button onClick={() => setConnectDialogOpen(true)} className="bg-black text-white px-6 py-2 rounded-lg font-medium hover:bg-white hover:text-black transition-all duration-200">Sign In</button>
               </>
             ) : (
               <DropdownMenu>
