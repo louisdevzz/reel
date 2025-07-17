@@ -1,9 +1,11 @@
 import { createFileRoute, useParams } from "@tanstack/react-router"
 import { useEffect, useState, useRef } from "react"
 import { apiService } from "../../lib/apiService"
+import { viewTrackingService } from "../../lib/viewTrackingService"
 import { ThumbsUp, Forward } from "lucide-react" 
 import { Video, Comment } from "../../types"
 import { useUser } from "../../contexts/userContext"
+import { useNavigate } from "@tanstack/react-router"
 
 export const Route = createFileRoute('/v/$videoId')({
   component: VideoPage,
@@ -12,6 +14,7 @@ export const Route = createFileRoute('/v/$videoId')({
 
 function VideoPage() {
   const { videoId } = useParams({ from: '/v/$videoId' })
+  const navigate = useNavigate()
   const [video, setVideo] = useState<Video | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([])
@@ -24,8 +27,101 @@ function VideoPage() {
   const [isFollowLoading, setIsFollowLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(true)
   const [hasInteracted, setHasInteracted] = useState(false)
+  const [viewTrackingActive, setViewTrackingActive] = useState(false)
+  const [viewCount, setViewCount] = useState(0)
+  const [viewStats, setViewStats] = useState<{
+    totalViews: number
+    uniqueViews: number
+    completedViews: number
+    averageWatchDuration: number
+  } | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const { currentUser } = useUser()
+
+  // Start view tracking when video loads
+  useEffect(() => {
+    if (!video || !currentUser?.id) return
+
+    const startTracking = async () => {
+      try {
+        // Stop previous tracking
+        if (viewTrackingActive) {
+          await viewTrackingService.stopTracking()
+        }
+
+        // Start tracking new video
+        const success = await viewTrackingService.startTracking(
+          video.id,
+          'videos',
+          currentUser.id
+        )
+
+        if (success) {
+          setViewTrackingActive(true)
+          // Increment view count when tracking starts (initial view)
+          setViewCount(prev => prev + 1)
+        }
+      } catch (error) {
+        console.error('Error starting view tracking:', error)
+      }
+    }
+
+    startTracking()
+
+    // Cleanup on unmount
+    return () => {
+      viewTrackingService.stopTracking()
+      setViewTrackingActive(false)
+    }
+  }, [video, currentUser?.id, viewTrackingActive])
+
+  // Track video progress for view analytics
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !viewTrackingActive) return
+
+    const handleTimeUpdate = () => {
+      const watchDuration = Math.floor(video.currentTime)
+      viewTrackingService.updateViewProgress(watchDuration)
+      
+      // Update view count periodically (every 30 seconds of watching)
+      if (watchDuration > 0 && watchDuration % 30 === 0) {
+        setViewCount(prev => prev + 1)
+        // Update view stats
+        if (viewStats) {
+          setViewStats(prev => prev ? {
+            ...prev,
+            totalViews: prev.totalViews + 1,
+            averageWatchDuration: Math.round((prev.averageWatchDuration * prev.totalViews + watchDuration) / (prev.totalViews + 1))
+          } : null)
+        }
+      }
+    }
+
+    const handleVideoEnded = () => {
+      const watchDuration = Math.floor(video.duration)
+      viewTrackingService.updateViewProgress(watchDuration, true)
+      
+      // Increment view count when video is completed
+      setViewCount(prev => prev + 1)
+      // Update completed views count
+      if (viewStats) {
+        setViewStats(prev => prev ? {
+          ...prev,
+          totalViews: prev.totalViews + 1,
+          completedViews: prev.completedViews + 1
+        } : null)
+      }
+    }
+
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('ended', handleVideoEnded)
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('ended', handleVideoEnded)
+    }
+  }, [viewTrackingActive, viewStats])
 
   useEffect(() => {
     const fetchVideoData = async () => {
@@ -38,6 +134,7 @@ function VideoPage() {
           setVideo(videoData)
           setLikeCount(videoData.likes || 0)
           setFollowersCount(videoData.creatorFollowers || 0)
+          setViewCount(videoData.views || 0)
         }
 
         const commentsData = await apiService.getVideoComments(videoId, 20, 0)
@@ -59,6 +156,17 @@ function VideoPage() {
           }
         }
 
+        // Fetch view statistics
+        try {
+          const stats = await viewTrackingService.getViewStats(videoId, 'videos')
+          if (stats) {
+            setViewStats(stats)
+            setViewCount(stats.totalViews)
+          }
+        } catch (error) {
+          console.error('Error fetching view stats:', error)
+        }
+
       } catch (error) {
         console.error('Error fetching video data:', error)
       } finally {
@@ -70,6 +178,29 @@ function VideoPage() {
       fetchVideoData()
     }
   }, [videoId, currentUser?.id])
+
+  // Set up periodic refresh of view stats
+  useEffect(() => {
+    if (!videoId) return
+
+    const refreshStats = async () => {
+      try {
+        const stats = await viewTrackingService.getViewStats(videoId, 'videos')
+        if (stats) {
+          setViewStats(stats)
+          setViewCount(stats.totalViews)
+        }
+      } catch (error) {
+        console.error('Error refreshing view stats:', error)
+      }
+    }
+
+    // Refresh stats every 30 seconds
+    const statsInterval = setInterval(refreshStats, 30000)
+
+    // Cleanup interval on unmount
+    return () => clearInterval(statsInterval)
+  }, [videoId])
 
   const formatViews = (views: number) => {
     if (views >= 1000000) {
@@ -91,6 +222,12 @@ function VideoPage() {
     if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
     if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`
     return `${Math.floor(diffInDays / 365)} years ago`
+  }
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   const handleLike = async () => {
@@ -270,6 +407,12 @@ function VideoPage() {
     if (!video) return
 
     const handleVideoEnded = () => {
+      // Mark view as completed for analytics
+      if (viewTrackingActive) {
+        const watchDuration = Math.floor(video.duration)
+        viewTrackingService.updateViewProgress(watchDuration, true)
+      }
+      
       video.currentTime = 0
       video.load()
       setIsPlaying(false)
@@ -278,7 +421,7 @@ function VideoPage() {
 
     video.addEventListener('ended', handleVideoEnded)
     return () => video.removeEventListener('ended', handleVideoEnded)
-  }, [])
+  }, [viewTrackingActive])
 
   if (loading) {
     return (
@@ -403,7 +546,13 @@ function VideoPage() {
           </div>
           
           <div className="bg-zinc-800 rounded-lg p-3 text-zinc-200 mb-4">
-            <div className="mb-1 font-semibold">{formatViews(video.views)} views • {formatDate(video.uploadDate)}</div>
+            <div className="mb-1 font-semibold">{formatViews(viewCount)} views • {formatDate(video.uploadDate)}</div>
+            {viewStats && (
+              <div className="text-sm text-zinc-400 mb-2">
+                {formatViews(viewStats.uniqueViews)} unique views • {formatViews(viewStats.completedViews)} completed • 
+                Avg watch time: {formatDuration(viewStats.averageWatchDuration)}
+              </div>
+            )}
             <div>{video.description}</div>
           </div>
           
@@ -462,6 +611,7 @@ function VideoPage() {
               <div 
                 key={relatedVideo.id} 
                 className="flex gap-3 cursor-pointer hover:bg-zinc-800 rounded p-2"
+                onClick={()=>navigate({to: '/v/$videoId', params: {videoId: relatedVideo.id}})}
               >
                 <div className="w-32 h-20 bg-zinc-700 rounded overflow-hidden relative">
                   <video

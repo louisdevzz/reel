@@ -10,6 +10,8 @@ const FACTORY_MODULE = `${FACTORY_ADDRESS}::factory_reel_v2`;
 const REEL_ADDRESS = "0x26a0989735ee42195aa939ccac20c1c28fce87462230adc46666c0685c7c0f81::coin::Reel"
 const PRIVATE_KEY_TREASURY = process.env.PRIVATE_KEY_TREASURY;
 
+const GARDEN_MODULE = "0x1e4cd5c8106687e1bde63439bf73a41fc5d331eb29e40ee643b60ef11e5e82ca::garden"
+
 if(!PRIVATE_KEY_TREASURY){
   console.log('PRIVATE_KEY_TREASURY is missing')
 }
@@ -27,10 +29,11 @@ const config = new AptosConfig({ network: Network.DEVNET });
 const aptos = new Aptos(config);
 
 export {
-    aptos,
-    account_relayer,
-    account_treasury,
-    FACTORY_ADDRESS,
-    FACTORY_MODULE,
-    REEL_ADDRESS
+  aptos,
+  account_relayer,
+  account_treasury,
+  FACTORY_ADDRESS,
+  FACTORY_MODULE,
+  REEL_ADDRESS,
+  GARDEN_MODULE
 }

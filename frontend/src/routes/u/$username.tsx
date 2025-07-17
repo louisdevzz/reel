@@ -246,7 +246,7 @@ function ProfilePage() {
                     <img
                         src={user.banner || "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=1200&q=80"}
                         alt="Banner"
-                        className="w-full h-48 object-cover opacity-60"
+                        className="w-full h-48 object-cover"
                     />
                     <div className="flex items-center justify-between p-6 px-6 lg:px-12">
                         <div className="flex items-center flex-wrap">

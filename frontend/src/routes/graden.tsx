@@ -7,13 +7,14 @@ import { CommentSection } from '../components/CommentSection'
 import { Plus } from 'lucide-react'
 import { relayerService } from '../lib/relayerService'
 import { toast } from 'react-hot-toast'
+import { PetFeed } from '../components/PetFeed'
 
 
-export const Route = createFileRoute('/reels')({
-  component: ReelsPage,
+export const Route = createFileRoute('/graden')({
+  component: GradenPage,
 })
 
-function ReelsPage() {
+function GradenPage() {
   const [videos, setVideos] = useState<any[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -613,9 +614,10 @@ function ReelsPage() {
   return (
     <div 
       ref={containerRef}
-      className="min-h-screen flex bg-[#18181b]"
+      className="min-h-screen grid grid-cols-3 bg-[#18181b]"
     >
-      <div className="flex flex-row flex-1 h-[calc(100vh-4rem)] overflow-y-auto justify-center items-center relative gap-4">
+      {/* Reels Feed */}
+      <div className="flex flex-row col-span-2 flex-1 h-[calc(100vh-4rem)] overflow-y-auto justify-center items-center relative gap-4">
         <div className="flex flex-row items-end gap-4">
           <div className="video-player flex justify-center items-center relative">
             <video
@@ -733,6 +735,11 @@ function ReelsPage() {
           onAddComment={async (content) => handleComment(content)}
           loading={!!commentsLoading[currentVideo.id]}
         />
+      </div>
+
+      {/* Pet Feed */}
+      <div className='border-l-[1px] border-gray-600 h-[calc(100vh-4rem)] hidden md:flex'>
+        <PetFeed />
       </div>
     </div>
   )

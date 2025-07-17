@@ -1,0 +1,164 @@
+module garden_addr::garden {
+    use std::option;
+    use std::signer;
+    use std::string::{Self, String};
+    use std::vector;
+
+    use aptos_std::string_utils;
+
+    use aptos_framework::event;
+    use aptos_framework::object::{Self, ExtendRef};
+
+    use aptos_token_objects::collection;
+    use aptos_token_objects::token::{Self, MutatorRef, BurnRef};
+
+    /// Item not exist at given address
+    const EITEM_NOT_EXIST: u64 = 1;
+    /// Dead Item cannot be used
+    const EDEAD_ITEM_CANNOT_USE: u64 = 2;
+
+    // ===================== Constants for Item Collection =====================
+    const ITEM_COLLECTION_OWNER_OBJ_SEED: vector<u8> = b"GARDEN_ITEM_COLLECTION_OWNER_OBJ";
+    const ITEM_COLLECTION_NAME: vector<u8> = b"Garden Item Collection";
+    const ITEM_COLLECTION_DESCRIPTION: vector<u8> = b"Collection of Item NFTs for planting";
+    const ITEM_COLLECTION_URI: vector<u8> = b"https://gateway.pinata.cloud/ipfs/bafybeifnpsyecoefmhsskj74fl45abt4qnparqnuszrzxkyu5cggzm7wxa";
+
+    // ===================== Collection Owner =====================
+    struct CollectionOwnerConfig has key {
+        extend_ref: ExtendRef,
+    }
+
+    // ===================== Item =====================
+    struct Item has key {
+        name: String,
+        level: u8,
+        slot_count: u8,
+        current_plants: vector<address>,
+        quantity: u64,
+        extend_ref: ExtendRef,
+        mutator_ref: MutatorRef,
+        burn_ref: BurnRef,
+    }
+
+    #[event]
+    struct MintItemEvent has drop, store {
+        item_address: address,
+        name: String,
+        level: u8,
+        slot_count: u8,
+        quantity: u64,
+    }
+
+    /// Module init: create collection owner and collection
+    fun init_module(sender: &signer) {
+        let collection_owner_obj_constructor_ref = object::create_named_object(
+            sender,
+            ITEM_COLLECTION_OWNER_OBJ_SEED,
+        );
+        let collection_owner_obj_signer = &object::generate_signer(&collection_owner_obj_constructor_ref);
+
+        move_to(collection_owner_obj_signer, CollectionOwnerConfig {
+            extend_ref: object::generate_extend_ref(&collection_owner_obj_constructor_ref)
+        });
+
+        let description = string::utf8(ITEM_COLLECTION_DESCRIPTION);
+        let name = string::utf8(ITEM_COLLECTION_NAME);
+        let uri = string::utf8(ITEM_COLLECTION_URI);
+
+        collection::create_unlimited_collection(
+            collection_owner_obj_signer,
+            description,
+            name,
+            option::none(),
+            uri,
+        );
+    }
+
+    // ===================== Entry Functions =====================
+    /// Create an Item token object.
+    entry fun create_item(name: String, level: u8, slot_count: u8, quantity: u64, uri: String, description: String, receive_addr: address) acquires CollectionOwnerConfig {
+        create_item_internal(name, level, slot_count, quantity, uri, description, receive_addr);
+    }
+
+    // ===================== View Functions =====================
+    #[view]
+    public fun get_item_collection_name(): (String) {
+        string::utf8(ITEM_COLLECTION_NAME)
+    }
+
+    #[view]
+    public fun get_item_collection_creator_address(): (address) {
+        get_collection_address()
+    }
+
+    #[view]
+    public fun get_item_collection_address(): (address) {
+        let collection_name = string::utf8(ITEM_COLLECTION_NAME);
+        let creator_address = get_collection_address();
+        collection::create_collection_address(&creator_address, &collection_name)
+    }
+
+    #[view]
+    public fun get_item(item_address: address): (String, u8, u8, vector<address>, u64) acquires Item {
+        let item = borrow_global<Item>(item_address);
+        (item.name, item.level, item.slot_count, item.current_plants, item.quantity)
+    }
+
+    // ===================== Helpers =====================
+    fun get_collection_address(): address {
+        object::create_object_address(&@garden_addr, ITEM_COLLECTION_OWNER_OBJ_SEED)
+    }
+
+    fun get_collection_signer(collection_address: address): signer acquires CollectionOwnerConfig {
+        object::generate_signer_for_extending(&borrow_global<CollectionOwnerConfig>(collection_address).extend_ref)
+    }
+
+    fun get_item_signer(item_address: address): signer acquires Item {
+        object::generate_signer_for_extending(&borrow_global<Item>(item_address).extend_ref)
+    }
+
+    fun create_item_internal(name: String, level: u8, slot_count: u8, quantity: u64, uri: String, description: String, receive_addr: address): address acquires CollectionOwnerConfig {
+        let collection_address = get_collection_address();
+        let constructor_ref = &token::create(
+            &get_collection_signer(collection_address),
+            string::utf8(ITEM_COLLECTION_NAME),
+            description,
+            name,
+            option::none(),
+            uri,
+        );
+        let token_signer_ref = &object::generate_signer(constructor_ref);
+        let item_address = signer::address_of(token_signer_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let mutator_ref = token::generate_mutator_ref(constructor_ref);
+        let burn_ref = token::generate_burn_ref(constructor_ref);
+        let transfer_ref = object::generate_transfer_ref(constructor_ref);
+        let item = Item {
+            name,
+            level,
+            slot_count,
+            current_plants: vector::empty<address>(),
+            quantity,
+            extend_ref,
+            mutator_ref,
+            burn_ref,
+        };
+        move_to(token_signer_ref, item);
+        event::emit<MintItemEvent>(
+            MintItemEvent {
+                item_address: signer::address_of(token_signer_ref),
+                name,
+                level,
+                slot_count,
+                quantity,
+            },
+        );
+        object::transfer_with_ref(object::generate_linear_transfer_ref(&transfer_ref), receive_addr);
+        item_address
+    }
+
+    fun check_item_exist(item_address: address) {
+        let exist_item = exists<Item>(item_address);
+        assert!(exist_item, EITEM_NOT_EXIST);
+    }
+}

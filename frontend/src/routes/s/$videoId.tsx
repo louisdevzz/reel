@@ -7,6 +7,7 @@ import { CommentSection } from '../../components/CommentSection'
 import { Plus } from 'lucide-react'
 import { User } from '../../types'
 import { relayerService } from '../../lib/relayerService'
+import { toast } from 'react-hot-toast'
 
 export const Route = createFileRoute('/s/$videoId')({
   component: ShortVideoPage,
@@ -368,7 +369,10 @@ function ShortVideoPage() {
   }
 
   const handleLike = async () => {
-    if (!currentUserId || !currentVideo) return
+    if (!currentUserId || !currentVideo) {
+      toast('Please log in to use this feature', { icon: '🔒' })
+      return
+    }
 
     try {
       const newIsLiked = !currentEngagement.isLiked
@@ -411,7 +415,10 @@ function ShortVideoPage() {
   }
 
   const handleComment = async (content?: string) => {
-    if (!currentUserId || !currentVideo) return;
+    if (!currentUserId || !currentVideo) {
+      toast('Please log in to use this feature', { icon: '🔒' })
+      return;
+    }
     let commentContent = content;
     if (!commentContent) {
       commentContent = prompt('Add a comment:') || '';
@@ -482,7 +489,10 @@ function ShortVideoPage() {
   };
 
   const handleShare = async () => {
-    if (!currentUserId || !currentVideo) return
+    if (!currentUserId || !currentVideo) {
+      toast('Please log in to use this feature', { icon: '🔒' })
+      return
+    }
 
     try {
       // Create share URL
@@ -524,7 +534,10 @@ function ShortVideoPage() {
   }
 
   const handleBookmark = async () => {
-    if (!currentUserId || !currentVideo) return
+    if (!currentUserId || !currentVideo) {
+      toast('Please log in to use this feature', { icon: '🔒' })
+      return
+    }
 
     try {
       const newIsBookmarked = !currentEngagement.isBookmarked
@@ -564,7 +577,10 @@ function ShortVideoPage() {
   }
 
   const handleFollow = async () => {
-    if (!currentUserId || !currentVideo?.userId) return
+    if (!currentUserId || !currentVideo?.userId) {
+      toast('Please log in to use this feature', { icon: '🔒' })
+      return
+    }
 
     // Prevent self-following
     if (currentUserId === currentVideo.userId) {

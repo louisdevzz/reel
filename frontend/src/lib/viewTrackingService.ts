@@ -5,6 +5,8 @@ class ViewTrackingService {
   private currentViewId: string | null = null
   private updateInterval: ReturnType<typeof setInterval> | null = null
   private startTime: number = 0
+  private retryCount: number = 0
+  private maxRetries: number = 3
 
   constructor() {
     // Generate a unique session ID for this browser session
@@ -32,7 +34,7 @@ class ViewTrackingService {
         body: JSON.stringify({
           userId,
           sessionId: this.sessionId,
-          ipAddress: await this.getClientIP(),
+          ipAddress: '',
           userAgent: navigator.userAgent,
         }),
       })
@@ -41,13 +43,19 @@ class ViewTrackingService {
         const data = await response.json()
         this.currentViewId = data.data.viewId
         
-        // Start periodic updates
-        this.startPeriodicUpdates(contentId, contentType)
-        
-        return true
+        // Only start periodic updates if we have a valid viewId
+        if (this.currentViewId) {
+          this.startPeriodicUpdates(contentId, contentType)
+          return true
+        } else {
+          console.warn('No viewId received from server, not starting tracking')
+          return false
+        }
+      } else {
+        console.warn(`Failed to start view tracking: ${response.status} ${response.statusText}`)
+        return false
       }
       
-      return false
     } catch (error) {
       console.error('Error starting view tracking:', error)
       return false
@@ -63,6 +71,7 @@ class ViewTrackingService {
     
     this.currentViewId = null
     this.startTime = 0
+    this.retryCount = 0
   }
 
   // Update view progress
@@ -70,7 +79,7 @@ class ViewTrackingService {
     if (!this.currentViewId) return
 
     try {
-      await fetch(`${API_BASE_URL}/views/${this.currentViewId}`, {
+      const response = await fetch(`${API_BASE_URL}/views/${this.currentViewId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -80,8 +89,29 @@ class ViewTrackingService {
           isCompleted,
         }),
       })
+
+      // If the request fails with 404 or other errors, increment retry count
+      if (!response.ok) {
+        this.retryCount++
+        console.warn(`View tracking failed with status ${response.status}, retry ${this.retryCount}/${this.maxRetries}`)
+        
+        if (this.retryCount >= this.maxRetries) {
+          console.warn('Max retries reached, stopping view tracking')
+          await this.stopTracking()
+        }
+        return
+      }
+
+      // Reset retry count on successful request
+      this.retryCount = 0
     } catch (error) {
-      console.error('Error updating view progress:', error)
+      this.retryCount++
+      console.warn(`View tracking request failed, retry ${this.retryCount}/${this.maxRetries}:`, error)
+      
+      if (this.retryCount >= this.maxRetries) {
+        console.warn('Max retries reached, stopping view tracking')
+        await this.stopTracking()
+      }
     }
   }
 
@@ -101,23 +131,6 @@ class ViewTrackingService {
 
     const watchDuration = Math.floor((Date.now() - this.startTime) / 1000)
     await this.updateViewProgress(watchDuration, true)
-  }
-
-  // Get client IP from our backend
-  private async getClientIP(): Promise<string> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/client-ip`)
-      if (response.ok) {
-        const data = await response.json()
-        return data.ip || 'unknown'
-      }
-    } catch (error) {
-      console.error('Error getting client IP from backend:', error)
-    }
-    
-    // Fallback: return unknown since we can't reliably get IP from frontend
-    // due to CORS restrictions on external IP services
-    return 'unknown'
   }
 
   // Get view statistics

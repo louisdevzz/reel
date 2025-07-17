@@ -15,7 +15,7 @@ import { Route as IndexImport } from "./routes";
 import { Route as ReelsImport } from "./routes/reels";
 import { Route as LivestreamImport } from "./routes/livestream";
 import { Route as ChallengesImport } from "./routes/challenges";
-import { Route as NftsImport } from "./routes/nfts";;
+import { Route as GradenImport } from "./routes/graden";;
 import { Route as StudioImport } from "./routes/studio";
 import { Route as LiveDetailsImport } from "./routes/live/$username";
 import { Route as ProfileImport } from "./routes/u/$username";
@@ -51,9 +51,9 @@ const ChallengesRoute = ChallengesImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
-const NftsRoute = NftsImport.update({
-  id: "/nfts",
-  path: "/nfts",
+const GradenRoute = GradenImport.update({
+  id: "/graden",
+  path: "/graden",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -143,11 +143,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ChallengesRoute;
       parentRoute: typeof rootRoute;
     };
-    "/nfts": {
-      id: "/nfts";
-      path: "/nfts";
-      fullPath: "/nfts";
-      preLoaderRoute: typeof NftsRoute;
+    "/graden": {
+      id: "/graden";
+      path: "/graden";
+      fullPath: "/graden";
+      preLoaderRoute: typeof GradenRoute;
       parentRoute: typeof rootRoute;
     };
     "/profile": {
@@ -230,7 +230,7 @@ export interface FileRoutesByFullPath {
   "/reels": typeof ReelsRoute;
   "/livestream": typeof LivestreamRoute;
   "/challenges": typeof ChallengesRoute;
-  "/nfts": typeof NftsRoute;
+  "/graden": typeof GradenRoute;
   "/profile": typeof ProfileRoute;
   "/studio": typeof StudioRoute;
   "/live/$username": typeof LiveDetailsRoute;
@@ -248,7 +248,7 @@ export interface FileRoutesByTo {
   "/reels": typeof ReelsRoute;
   "/livestream": typeof LivestreamRoute;
   "/challenges": typeof ChallengesRoute;
-  "/nfts": typeof NftsRoute;
+  "/graden": typeof GradenRoute;
   "/profile": typeof ProfileRoute;
   "/studio": typeof StudioRoute;
   "/live/$username": typeof LiveDetailsRoute;
@@ -267,7 +267,7 @@ export interface FileRoutesById {
   "/reels": typeof ReelsRoute;
   "/livestream": typeof LivestreamRoute;
   "/challenges": typeof ChallengesRoute;
-  "/nfts": typeof NftsRoute;
+  "/graden": typeof GradenRoute;
   "/profile": typeof ProfileRoute;
   "/studio": typeof StudioRoute;
   "/live/$username": typeof LiveDetailsRoute;
@@ -287,7 +287,7 @@ export interface FileRouteTypes {
     | "/reels"
     | "/livestream"
     | "/challenges"
-    | "/nfts"
+    | "/graden"
     | "/profile"
     | "/studio"
     | "/live/$username"
@@ -299,14 +299,14 @@ export interface FileRouteTypes {
     | "/callback"
     | "/list_task"
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/reels" | "/livestream" | "/challenges" | "/nfts" | "/profile" | "/studio" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId" | "/wallet" | "/callback";
+  to: "/" | "/reels" | "/livestream" | "/challenges" | "/graden" | "/profile" | "/studio" | "/live/$username" | "/u/$username" | "/search" | "/s/$videoId" | "/v/$videoId" | "/wallet" | "/callback";
   id:
     | "__root__"
     | "/"
     | "/reels"
     | "/livestream"
     | "/challenges"
-    | "/nfts"
+    | "/graden"
     | "/profile"
     | "/studio"
     | "/live/$username"
@@ -324,7 +324,7 @@ export interface RootRouteChildren {
   ReelsRoute: typeof ReelsRoute;
   LivestreamRoute: typeof LivestreamRoute;
   ChallengesRoute: typeof ChallengesRoute;
-  NftsRoute: typeof NftsRoute;
+  GradenRoute: typeof GradenRoute;
   ProfileRoute: typeof ProfileRoute;
   StudioRoute: typeof StudioRoute;
   LiveDetailsRoute: typeof LiveDetailsRoute;
@@ -342,7 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReelsRoute: ReelsRoute,
   LivestreamRoute: LivestreamRoute,
   ChallengesRoute: ChallengesRoute,
-  NftsRoute: NftsRoute,
+  GradenRoute: GradenRoute,
   ProfileRoute: ProfileRoute,
   StudioRoute: StudioRoute,
   LiveDetailsRoute: LiveDetailsRoute,

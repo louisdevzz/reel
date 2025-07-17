@@ -177,6 +177,58 @@ export interface UpdateUserInfoResponse {
   };
 }
 
+// Garden-related interfaces
+export interface PotData {
+  name: string;
+  level: number;
+  quantity: number;
+  uri: string;
+  description: string;
+  receiveAddr: string;
+}
+
+export interface PlantData {
+  name: string;
+  rarity: number;
+  quantity: number;
+  baseGrowDurationSec: number;
+  uri: string;
+  description: string;
+  receiveAddr: string;
+}
+
+export interface ItemData {
+  name: string;
+  level: number;
+  quantity: number;
+  uri: string;
+  description: string;
+  receiveAddr: string;
+}
+
+export interface PetData {
+  name: string;
+  species: string;
+  intelligence: number;
+  strength: number;
+  agility: number;
+  evolvedFromPlant: string;
+  receiveAddr: string;
+}
+
+export interface GardenResponse {
+  success: boolean;
+  message: string;
+  transactionHash?: string;
+  data?: any;
+}
+
+export interface GardenItemResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
 class RelayerService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${RELAYER_BASE_URL}${endpoint}`;
@@ -375,6 +427,584 @@ class RelayerService {
     } catch (error) {
       handleError(error, 'healthCheck');
       return false;
+    }
+  }
+
+  // ===================== Garden APIs =====================
+  
+  // Pot APIs
+  async createPot(potData: PotData): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pot/create', {
+        method: 'POST',
+        body: JSON.stringify(potData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'createPot');
+      return null;
+    }
+  }
+
+  async getLatestPot(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pot/latest/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getLatestPot');
+      return null;
+    }
+  }
+
+  async getPotByAddress(potAddress: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pot/${potAddress}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPotByAddress');
+      return null;
+    }
+  }
+
+  async getAllPots(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pots/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllPots');
+      return null;
+    }
+  }
+
+  async getPotAddresses(address: string): Promise<string[] | null> {
+    try {
+      const response = await this.request<{ status: string; data: string[] }>(`/api/garden/pot/addresses/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPotAddresses');
+      return null;
+    }
+  }
+
+  async getPotAddressesAndInfo(address: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ status: string; data: any }>(`/api/garden/pot/addresses-info/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPotAddressesAndInfo');
+      return null;
+    }
+  }
+
+  async getPotInfo(address: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ status: string; data: any }>(`/api/garden/pot/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPotInfo');
+      return null;
+    }
+  }
+
+  async upgradePot(potAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pot/upgrade', {
+        method: 'POST',
+        body: JSON.stringify({ potAddr: potAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'upgradePot');
+      return null;
+    }
+  }
+
+  async burnPot(potAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pot/burn', {
+        method: 'POST',
+        body: JSON.stringify({ potAddr: potAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'burnPot');
+      return null;
+    }
+  }
+
+  async increasePotQuantity(potAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pot/increase-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ potAddr: potAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'increasePotQuantity');
+      return null;
+    }
+  }
+
+  async decreasePotQuantity(potAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pot/decrease-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ potAddr: potAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'decreasePotQuantity');
+      return null;
+    }
+  }
+
+  // Plant APIs
+  async createPlant(plantData: PlantData): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/create', {
+        method: 'POST',
+        body: JSON.stringify(plantData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'createPlant');
+      return null;
+    }
+  }
+
+  async getLatestPlant(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/plant/latest/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getLatestPlant');
+      return null;
+    }
+  }
+
+  async getPlantByAddress(plantAddress: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/plant/${plantAddress}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPlantByAddress');
+      return null;
+    }
+  }
+
+  async getAllPlants(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/plants/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllPlants');
+      return null;
+    }
+  }
+
+  async getPlantAddresses(address: string): Promise<string[] | null> {
+    try {
+      const response = await this.request<{ status: string; data: string[] }>(`/api/garden/plant/addresses/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPlantAddresses');
+      return null;
+    }
+  }
+
+  async getPlantAddressesAndInfo(address: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ status: string; data: any }>(`/api/garden/plant/addresses-info/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPlantAddressesAndInfo');
+      return null;
+    }
+  }
+
+  async getPlantInfo(address: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ status: string; data: any }>(`/api/garden/plant/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPlantInfo');
+      return null;
+    }
+  }
+
+  async plantSeed(potAddress: string, plantAddress: string): Promise<any | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: any }>('/api/garden/plant/seed', {
+        method: 'POST',
+        body: JSON.stringify({ potAddr: potAddress, plantAddr: plantAddress }),
+      });
+      return response;
+    } catch (error) {
+      handleError(error, 'plantSeed');
+      return null;
+    }
+  }
+
+  async updateGrowthStage(plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/update-growth', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'updateGrowthStage');
+      return null;
+    }
+  }
+
+  async transferPlant(potFromAddress: string, potToAddress: string, plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/transfer', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          potFromAddr: potFromAddress, 
+          potToAddr: potToAddress, 
+          plantAddr: plantAddress 
+        }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'transferPlant');
+      return null;
+    }
+  }
+
+  async advanceGrowth(plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/advance-growth', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'advanceGrowth');
+      return null;
+    }
+  }
+
+  async harvest(plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/harvest', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'harvest');
+      return null;
+    }
+  }
+
+  async burnPlant(plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/burn', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'burnPlant');
+      return null;
+    }
+  }
+
+  async increasePlantQuantity(plantAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/increase-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'increasePlantQuantity');
+      return null;
+    }
+  }
+
+  async decreasePlantQuantity(plantAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/decrease-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'decreasePlantQuantity');
+      return null;
+    }
+  }
+
+  async setPlantBaseGrowDuration(plantAddress: string, duration: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/plant/set-grow-duration', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress, duration }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'setPlantBaseGrowDuration');
+      return null;
+    }
+  }
+
+  async isPlantInPot(plantAddress: string, potAddress: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/plant/in-pot/${plantAddress}/${potAddress}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'isPlantInPot');
+      return null;
+    }
+  }
+
+  // Item APIs
+  async createItem(itemData: ItemData): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/create', {
+        method: 'POST',
+        body: JSON.stringify(itemData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'createItem');
+      return null;
+    }
+  }
+
+  async getLatestItem(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/item/latest/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getLatestItem');
+      return null;
+    }
+  }
+
+  async getItemByAddress(itemAddress: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/item/${itemAddress}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getItemByAddress');
+      return null;
+    }
+  }
+
+  async getAllItems(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/items/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllItems');
+      return null;
+    }
+  }
+
+  async getItemAddresses(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/item/addresses/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getItemAddresses');
+      return null;
+    }
+  }
+
+  async getItemAddressesAndInfo(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/item/addresses-info/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getItemAddressesAndInfo');
+      return null;
+    }
+  }
+
+  async burnItem(itemAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/burn', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'burnItem');
+      return null;
+    }
+  }
+
+  async increaseItemQuantity(itemAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/increase-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'increaseItemQuantity');
+      return null;
+    }
+  }
+
+  async decreaseItemQuantity(itemAddress: string, amount: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/decrease-quantity', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, amount }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'decreaseItemQuantity');
+      return null;
+    }
+  }
+
+  async setItemUsageType(itemAddress: string, usageType: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/set-usage-type', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, newUsageType: usageType }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'setItemUsageType');
+      return null;
+    }
+  }
+
+  async setItemEffectValue(itemAddress: string, effectValue: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/set-effect-value', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, newEffectValue: effectValue }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'setItemEffectValue');
+      return null;
+    }
+  }
+
+  async setItemMaxUsage(itemAddress: string, maxUsage: number): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/set-max-usage', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, newMaxUsage: maxUsage }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'setItemMaxUsage');
+      return null;
+    }
+  }
+
+  async useItemReduceGrowTime(itemAddress: string, plantAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/item/use-reduce-grow-time', {
+        method: 'POST',
+        body: JSON.stringify({ itemAddr: itemAddress, plantAddr: plantAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'useItemReduceGrowTime');
+      return null;
+    }
+  }
+
+  // Pet APIs
+  async createPet(petData: PetData): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pet/create', {
+        method: 'POST',
+        body: JSON.stringify(petData),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'createPet');
+      return null;
+    }
+  }
+
+  async getLatestPet(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pet/latest/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getLatestPet');
+      return null;
+    }
+  }
+
+  async getPetByAddress(petAddress: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pet/${petAddress}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPetByAddress');
+      return null;
+    }
+  }
+
+  async getAllPets(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pets/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getAllPets');
+      return null;
+    }
+  }
+
+  async getPetAddresses(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pet/addresses/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPetAddresses');
+      return null;
+    }
+  }
+
+  async getPetAddressesAndInfo(address: string): Promise<GardenItemResponse | null> {
+    try {
+      const response = await this.request<{ status: string; data: GardenItemResponse }>(`/api/garden/pet/addresses-info/${address}`);
+      return response.data;
+    } catch (error) {
+      handleError(error, 'getPetAddressesAndInfo');
+      return null;
+    }
+  }
+
+  async evolveToPet(plantAddress: string, receiver: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pet/evolve', {
+        method: 'POST',
+        body: JSON.stringify({ plantAddr: plantAddress, receiver }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'evolveToPet');
+      return null;
+    }
+  }
+
+  async burnPet(petAddress: string): Promise<GardenResponse | null> {
+    try {
+      const response = await this.request<{ status: string; message: string; data: GardenResponse }>('/api/garden/pet/burn', {
+        method: 'POST',
+        body: JSON.stringify({ petAddr: petAddress }),
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error, 'burnPet');
+      return null;
     }
   }
 }
